@@ -1,0 +1,1062 @@
+openapi: 3.0.3
+info:
+  title: OMPAY Banking API
+  description: API RESTful pour le système bancaire OMPAY - Gestion des comptes, transactions et authentification
+  version: 1.0.0
+  contact:
+    name: OMPAY Support
+    email: support@ompay.sn
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8000/api
+    description: Serveur de développement
+  - url: https://api.ompay.sn/api
+    description: Serveur de production
+
+security:
+  - bearerAuth: []
+  - oauth2: ['*']
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    oauth2:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: /oauth/token
+          scopes:
+            '*': Accès complet à l'API
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        nom:
+          type: string
+          example: "Diop"
+        prenom:
+          type: string
+          example: "Amadou"
+        telephone:
+          type: string
+          example: "+221771234567"
+        email:
+          type: string
+          format: email
+          example: "amadou.diop@email.com"
+        role:
+          type: string
+          enum: [Admin, Client]
+        status:
+          type: string
+          enum: [Actif, Inactif]
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Compte:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        numero_compte:
+          type: string
+          example: "OM12345678"
+        type:
+          type: string
+          enum: [cheque, epargne]
+        statut:
+          type: string
+          enum: [actif, bloque, ferme]
+        solde:
+          type: number
+          format: float
+          example: 150000.00
+        devise:
+          type: string
+          example: "FCFA"
+        client:
+          $ref: '#/components/schemas/Client'
+        created_at:
+          type: string
+          format: date-time
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        profession:
+          type: string
+          nullable: true
+        user:
+          $ref: '#/components/schemas/User'
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [depot, retrait, transfert]
+        montant:
+          type: number
+          format: float
+          example: 50000.00
+        statut:
+          type: string
+          enum: [reussi, en_cours, echoue]
+        date_operation:
+          type: string
+          format: date-time
+        description:
+          type: string
+          nullable: true
+        reference:
+          type: string
+          example: "TXN202411111230451234"
+        destinataire_id:
+          type: string
+          format: uuid
+          nullable: true
+        user:
+          $ref: '#/components/schemas/User'
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Erreur de validation"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        status_code:
+          type: integer
+          example: 400
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Opération réussie"
+        data:
+          type: object
+        status_code:
+          type: integer
+          example: 200
+
+    LoginRequest:
+      type: object
+      required:
+        - telephone
+        - password
+      properties:
+        telephone:
+          type: string
+          example: "+221771234567"
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    RegisterRequest:
+      type: object
+      required:
+        - nom
+        - prenom
+        - telephone
+        - password
+        - otp
+        - cni
+        - sexe
+        - date_naissance
+      properties:
+        nom:
+          type: string
+          example: "Diop"
+        prenom:
+          type: string
+          example: "Amadou"
+        telephone:
+          type: string
+          example: "+221771234567"
+        password:
+          type: string
+          format: password
+          example: "password123"
+        otp:
+          type: string
+          example: "123456"
+        cni:
+          type: string
+          example: "1234567890123"
+        sexe:
+          type: string
+          enum: [M, F]
+          example: "M"
+        date_naissance:
+          type: string
+          format: date
+          example: "1990-01-15"
+
+    DepositRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 100
+          maximum: 5000000
+          example: 50000
+        description:
+          type: string
+          maxLength: 255
+          example: "Dépôt via mobile"
+
+    WithdrawRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 100
+          maximum: 1000000
+          example: 25000
+        description:
+          type: string
+          maxLength: 255
+          example: "Retrait DAB"
+
+    TransferRequest:
+      type: object
+      required:
+        - recipient_telephone
+        - amount
+      properties:
+        recipient_telephone:
+          type: string
+          example: "+221781234567"
+        amount:
+          type: number
+          format: float
+          minimum: 100
+          maximum: 1000000
+          example: 15000
+        description:
+          type: string
+          maxLength: 255
+          example: "Paiement facture"
+
+paths:
+  /user:
+    get:
+      summary: Récupérer les informations de l'utilisateur connecté
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Informations utilisateur récupérées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/send-verification:
+    post:
+      summary: Envoyer un code de vérification SMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - telephone
+              properties:
+                telephone:
+                  type: string
+                  example: "+221771234567"
+      responses:
+        '200':
+          description: Code envoyé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/register:
+    post:
+      summary: Inscription d'un nouvel utilisateur OMPAY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Inscription réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Erreur de validation ou OTP invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/login:
+    post:
+      summary: Connexion utilisateur OMPAY
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/deposit:
+    post:
+      summary: Effectuer un dépôt
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+      responses:
+        '200':
+          description: Dépôt effectué avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Erreur de validation ou montant invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/withdraw:
+    post:
+      summary: Effectuer un retrait
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawRequest'
+      responses:
+        '200':
+          description: Retrait effectué avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Solde insuffisant ou erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/transfer:
+    post:
+      summary: Effectuer un transfert
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: Transfert effectué avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Destinataire introuvable ou solde insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/balance/{compteId}:
+    get:
+      summary: Consulter le solde d'un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Solde récupéré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Compte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/transactions/{compteId}:
+    get:
+      summary: Récupérer l'historique des transactions d'un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Historique récupéré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Compte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ompay/logout:
+    post:
+      summary: Déconnexion utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Connexion administrateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      summary: Déconnexion administrateur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/admin/dashboard:
+    get:
+      summary: Tableau de bord administrateur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Données du dashboard récupérées
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/users:
+    get:
+      summary: Lister tous les utilisateurs (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Liste des utilisateurs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Créer un nouvel utilisateur (Admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nom
+                - prenom
+                - telephone
+                - email
+                - password
+              properties:
+                nom:
+                  type: string
+                prenom:
+                  type: string
+                telephone:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [Admin, Client]
+                  default: Client
+      responses:
+        '201':
+          description: Utilisateur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/users/{user}:
+    get:
+      summary: Détails d'un utilisateur (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Modifier un utilisateur (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nom:
+                  type: string
+                prenom:
+                  type: string
+                status:
+                  type: string
+                  enum: [Actif, Inactif]
+                role:
+                  type: string
+                  enum: [Admin, Client]
+      responses:
+        '200':
+          description: Utilisateur modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Supprimer un utilisateur (Admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Utilisateur supprimé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/comptes:
+    get:
+      summary: Lister tous les comptes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Liste des comptes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Créer un nouveau compte
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - soldeInitial
+                - devise
+                - solde
+                - client
+              properties:
+                type:
+                  type: string
+                  enum: [cheque, epargne]
+                soldeInitial:
+                  type: number
+                  format: float
+                  minimum: 10000
+                devise:
+                  type: string
+                  enum: [FCFA]
+                solde:
+                  type: number
+                  format: float
+                  minimum: 10000
+                client:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    titulaire:
+                      type: string
+                    nci:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    telephone:
+                      type: string
+                    adresse:
+                      type: string
+                    profession:
+                      type: string
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/comptes/{compte}:
+    get:
+      summary: Détails d'un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compte
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails du compte
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Compte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Modifier un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compte
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client:
+                  type: object
+                  properties:
+                    profession:
+                      type: string
+      responses:
+        '200':
+          description: Compte modifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Fermer un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compte
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Compte fermé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/comptes/{compte}/transactions:
+    get:
+      summary: Historique des transactions d'un compte
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: compte
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Historique des transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Accès refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Compte introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /oauth/token:
+    post:
+      summary: Obtenir un token OAuth2
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - grant_type
+                - client_id
+                - client_secret
+                - username
+                - password
+              properties:
+                grant_type:
+                  type: string
+                  enum: [password]
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                scope:
+                  type: string
+      responses:
+        '200':
+          description: Token obtenu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token_type:
+                    type: string
+                    example: "Bearer"
+                  expires_in:
+                    type: integer
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '400':
+          description: Erreur d'authentification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
