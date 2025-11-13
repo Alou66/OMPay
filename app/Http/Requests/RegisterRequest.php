@@ -22,14 +22,29 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'telephone' => ['required', 'string', new \App\Rules\ValidTelephoneSenegal],
+            'telephone' => ['required', 'string', 'unique:users,telephone', new \App\Rules\ValidTelephoneSenegal],
             'otp' => 'required|string|size:6',
             'nom' => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
             'password' => 'required|string|min:8|confirmed',
-            'cni' => ['required', 'string', new \App\Rules\ValidNciSenegal],
+            'cni' => ['required', 'string', 'unique:users,cni', new \App\Rules\ValidNciSenegal],
             'sexe' => 'required|in:M,F',
             'date_naissance' => 'required|date|before:today',
         ];
+    }
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $telephoneRule = collect($this->rules()['telephone'])
+            ->first(fn($rule) => $rule instanceof \App\Rules\ValidTelephoneSenegal);
+
+        if ($telephoneRule && $telephoneRule->getNormalizedValue()) {
+            $this->merge([
+                'telephone' => $telephoneRule->getNormalizedValue(),
+            ]);
+        }
     }
 }

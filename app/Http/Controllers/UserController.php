@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Admin;
+use App\Actions\User\ListUsersAction;
+use App\Actions\User\CreateUserAction;
+use App\Actions\User\ShowUserAction;
+use App\Actions\User\UpdateUserAction;
+use App\Actions\User\DeleteUserAction;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -12,11 +17,20 @@ class UserController extends Controller
 {
     use ApiResponseTrait;
 
+    public function __construct(
+        private ListUsersAction $listUsersAction,
+        private CreateUserAction $createUserAction,
+        private ShowUserAction $showUserAction,
+        private UpdateUserAction $updateUserAction,
+        private DeleteUserAction $deleteUserAction
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('manageUsers', Admin::class);
 
-        $users = User::paginate(10);
+        $listUsersAction = $this->listUsersAction;
+        $users = $listUsersAction();
         return $this->paginatedResponse($users, $users, 'Users retrieved successfully');
     }
 
@@ -37,9 +51,8 @@ class UserController extends Controller
             'date_naissance' => 'nullable|date',
         ]);
 
-        $validated['password'] = bcrypt($validated['password']);
-
-        $user = User::create($validated);
+        $createUserAction = $this->createUserAction;
+        $user = $createUserAction($validated);
 
         return $this->successResponse($user, 'User created successfully', 201);
     }
@@ -48,6 +61,8 @@ class UserController extends Controller
     {
         $this->authorize('manageUsers', Admin::class);
 
+        $showUserAction = $this->showUserAction;
+        $user = $showUserAction($user);
         return $this->successResponse($user, 'User retrieved successfully');
     }
 
@@ -62,7 +77,8 @@ class UserController extends Controller
             'role' => 'in:Admin,Client',
         ]);
 
-        $user->update($validated);
+        $updateUserAction = $this->updateUserAction;
+        $user = $updateUserAction($user, $validated);
         return $this->successResponse($user, 'User updated successfully');
     }
 
@@ -70,7 +86,8 @@ class UserController extends Controller
     {
         $this->authorize('manageUsers', Admin::class);
 
-        $user->delete();
+        $deleteUserAction = $this->deleteUserAction;
+        $deleteUserAction($user);
         return $this->successResponse(null, 'User deleted successfully');
     }
 }

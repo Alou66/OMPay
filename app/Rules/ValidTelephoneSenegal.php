@@ -7,6 +7,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
 
 class ValidTelephoneSenegal implements ValidationRule
 {
+    public $normalizedValue = null;
+
     /**
      * Run the validation rule.
      *
@@ -17,6 +19,18 @@ class ValidTelephoneSenegal implements ValidationRule
         // Format téléphone Sénégal : +221XXXXXXXXX ou 77XXXXXXX ou 78XXXXXXX ou 76XXXXXXX ou 70XXXXXXX
         if (!preg_match('/^(\+221|221)?(76|77|78|70)\d{7}$/', $value)) {
             $fail('Le numéro de téléphone doit être au format sénégalais (ex: +221771234567 ou 771234567). Le numéro fourni : ' . $value);
+            return;
         }
+
+        // Normalize to format without country code
+        $this->normalizedValue = preg_replace('/^(\+221|221)/', '', $value);
+    }
+
+    /**
+     * Get the normalized telephone number
+     */
+    public function getNormalizedValue(): ?string
+    {
+        return $this->normalizedValue;
     }
 }

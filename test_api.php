@@ -240,7 +240,7 @@ class ApiTester
         );
 
         // 2. Récupérer l'OTP depuis les logs Laravel
-        $otpCode = $this->getOtpFromLogs("771234567");
+        $otpCode = $this->getOtpFromDatabase("771234567");
 
         if ($otpCode) {
             echo "🔍 OTP récupéré depuis DB: $otpCode\n";

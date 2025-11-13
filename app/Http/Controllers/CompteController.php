@@ -3,7 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Compte;
-use App\Services\CompteService;
+use App\Actions\Compte\ListComptesAction;
+use App\Actions\Compte\ShowCompteAction;
+use App\Actions\Compte\CreateCompteAction;
+use App\Actions\Compte\UpdateCompteAction;
+use App\Actions\Compte\DeleteCompteAction;
+use App\Actions\Compte\GetCompteTransactionsAction;
 use App\Http\Resources\CompteResource;
 use App\Http\Requests\CreateCompteRequest;
 use App\Http\Requests\UpdateClientRequest;
@@ -18,7 +23,12 @@ class CompteController extends Controller
     use ApiResponseTrait, ControllerHelperTrait;
 
     public function __construct(
-        private CompteService $compteService
+        private ListComptesAction $listComptesAction,
+        private ShowCompteAction $showCompteAction,
+        private CreateCompteAction $createCompteAction,
+        private UpdateCompteAction $updateCompteAction,
+        private DeleteCompteAction $deleteCompteAction,
+        private GetCompteTransactionsAction $getCompteTransactionsAction
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -29,8 +39,8 @@ class CompteController extends Controller
         return $this->tryAction(function () use ($request) {
             $validated = $request->validate(['limit' => 'nullable|integer|min:1|max:100']);
 
-            $comptes = Compte::with(['client.user', 'transactions'])
-                ->paginate($validated['limit'] ?? 10);
+            $listComptesAction = $this->listComptesAction;
+            $comptes = $listComptesAction($validated['limit'] ?? 10);
 
             return $this->paginatedResponse(
                 CompteResource::collection($comptes),
@@ -50,9 +60,8 @@ class CompteController extends Controller
         $this->authorizeAction('view', $compte);
 
         return $this->tryAction(function () use ($compte) {
-            $compte->load(['client.user', 'transactions' => function ($query) {
-                $query->latest()->take(10);
-            }]);
+            $showCompteAction = $this->showCompteAction;
+            $compte = $showCompteAction($compte);
 
             return $this->successResponse(
                 new CompteResource($compte),
@@ -66,7 +75,8 @@ class CompteController extends Controller
         $this->authorizeAction('create', Compte::class);
 
         return $this->tryAction(function () use ($request) {
-            $compte = $this->compteService->createCompte($request->validated());
+            $createCompteAction = $this->createCompteAction;
+            $compte = $createCompteAction($request->validated());
 
             return $this->successResponse(
                 new CompteResource($compte),
@@ -86,7 +96,8 @@ class CompteController extends Controller
         $this->authorizeAction('update', $compte);
 
         return $this->tryAction(function () use ($compte, $request) {
-            $this->compteService->updateClientInfo($compte, $request->validated());
+            $updateCompteAction = $this->updateCompteAction;
+            $compte = $updateCompteAction($compte, $request->validated());
 
             return $this->successResponse(
                 new CompteResource($compte),
@@ -97,7 +108,7 @@ class CompteController extends Controller
 
 
     public function destroy(string $id): JsonResponse
- {
+    {
         if (!$this->validateUuid($id, 'ID du compte')) {
             return $this->errorResponse('ID du compte invalide', 400);
         }
@@ -105,19 +116,11 @@ class CompteController extends Controller
         $compte = $this->findOrFail(Compte::withoutGlobalScopes(), $id, 'Compte');
         $this->authorizeAction('delete', $compte);
 
-        if ($compte->statut === 'fermé') {
-            return $this->errorResponse('Ce compte est déjà fermé', 400);
-        }
-
         return $this->tryAction(function () use ($compte) {
-            $compte->delete();
+            $deleteCompteAction = $this->deleteCompteAction;
+            $result = $deleteCompteAction($compte);
 
-            return $this->successResponse([
-                'id' => $compte->id,
-                'numeroCompte' => $compte->numero_compte,
-                'statut' => $compte->statut,
-                'dateFermeture' => $compte->date_fermeture?->toISOString(),
-            ], 'Compte fermé et supprimé avec succès');
+            return $this->successResponse($result, 'Compte fermé et supprimé avec succès');
         });
     }
 
@@ -131,9 +134,8 @@ class CompteController extends Controller
         $this->authorizeAction('viewTransactions', $compte);
 
         return $this->tryAction(function () use ($compte) {
-            $transactions = $compte->transactions()
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+            $getCompteTransactionsAction = $this->getCompteTransactionsAction;
+            $transactions = $getCompteTransactionsAction($compte);
 
             return $this->paginatedResponse(
                 $transactions,

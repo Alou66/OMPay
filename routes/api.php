@@ -47,6 +47,8 @@ Route::prefix('ompay')->group(function () {
 
         // Consultations
         Route::get('balance/{compteId}', [OmpayController::class, 'getBalance']);
+        Route::get('balance', [OmpayController::class, 'getBalance']); // Added for consistency
+        Route::get('history', [OmpayController::class, 'getHistory']); // Added for consistency
         Route::get('transactions/{compteId}', [OmpayController::class, 'getTransactions']);
 
         // Anciennes routes (maintenues pour compatibilité)

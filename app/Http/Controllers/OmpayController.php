@@ -8,81 +8,73 @@ use App\Http\Requests\OmpayLoginRequest;
 use App\Http\Requests\TransferRequest;
 use App\Http\Requests\DepositRequest;
 use App\Http\Requests\WithdrawRequest;
-use App\Services\OmpayService;
-use App\Services\TransactionService;
+use App\Actions\Ompay\SendVerificationAction;
+use App\Actions\Ompay\RegisterAction;
+use App\Actions\Ompay\LoginAction;
+use App\Actions\Ompay\GetBalanceAction;
+use App\Actions\Ompay\TransferAction;
+use App\Actions\Ompay\GetHistoryAction;
+use App\Actions\Ompay\LogoutAction;
+use App\Actions\Ompay\DepositAction;
+use App\Actions\Ompay\WithdrawAction;
+use App\Actions\Ompay\GetTransactionsAction;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 
 class OmpayController extends Controller
 {
     use ApiResponseTrait;
 
-    protected $ompayService;
-    protected $transactionService;
-
-    public function __construct(OmpayService $ompayService, TransactionService $transactionService)
-    {
-        $this->ompayService = $ompayService;
-        $this->transactionService = $transactionService;
-    }
+    public function __construct(
+        private SendVerificationAction $sendVerificationAction,
+        private RegisterAction $registerAction,
+        private LoginAction $loginAction,
+        private GetBalanceAction $getBalanceAction,
+        private TransferAction $transferAction,
+        private GetHistoryAction $getHistoryAction,
+        private LogoutAction $logoutAction,
+        private DepositAction $depositAction,
+        private WithdrawAction $withdrawAction,
+        private GetTransactionsAction $getTransactionsAction
+    ) {}
 
     public function sendVerification(SendVerificationRequest $request)
     {
-        $otp = $this->ompayService->sendVerificationCode($request->telephone);
+        $sendVerificationAction = $this->sendVerificationAction;
+        $sendVerificationAction($request->telephone);
 
-        return $this->successResponse(null, 'Code de vérification envoyé par SMS');
+        return $this->successResponse(null, 'Code de vérification envoyé par SMS avec succès actuellement dans le fichier laravel.log pour les tests');
     }
 
     public function register(RegisterRequest $request)
     {
-        if (!$this->ompayService->verifyOtp($request->telephone, $request->otp)) {
-            return $this->errorResponse('Code OTP invalide ou expiré', 400);
+        try {
+            $registerAction = $this->registerAction;
+            $result = $registerAction($request->validated());
+
+            return $this->successResponse($result, 'Inscription réussie');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
         }
-
-        $user = $this->ompayService->register($request->validated());
-
-        $token = $user->createToken('OMPAY Access');
-
-        return $this->successResponse([
-            'user' => $user,
-            'token' => $token->plainTextToken,
-            'token_type' => 'Bearer',
-        ], 'Inscription réussie');
     }
 
     public function login(OmpayLoginRequest $request)
     {
-        if (!Auth::attempt($request->only('telephone', 'password'))) {
-            return $this->errorResponse('Identifiants invalides', 401);
+        try {
+            $loginAction = $this->loginAction;
+            $result = $loginAction($request->only('telephone', 'password'));
+
+            return $this->successResponse($result, 'Connexion réussie');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 401);
         }
-
-        $user = Auth::user();
-        $token = $user->createToken('OMPAY Access');
-
-        return $this->successResponse([
-            'user' => $user,
-            'token' => $token->plainTextToken,
-            'token_type' => 'Bearer',
-        ], 'Connexion réussie');
     }
 
     public function getBalance($compteId = null)
     {
-        // Si pas de compteId fourni, utiliser le compte de l'utilisateur connecté
-        if (!$compteId) {
-            $user = Auth::user();
-            $compte = $user->client->comptes()->first();
-
-            if (!$compte) {
-                return $this->errorResponse('Aucun compte trouvé', 404);
-            }
-
-            $compteId = $compte->id;
-        }
-
         try {
-            $balance = $this->transactionService->getBalance($compteId);
+            $getBalanceAction = $this->getBalanceAction;
+            $balance = $getBalanceAction($compteId);
             return $this->successResponse($balance, 'Solde récupéré avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 404);
@@ -94,18 +86,15 @@ class OmpayController extends Controller
         $user = Auth::user();
 
         try {
-            $result = $this->transactionService->transfer(
+            $transferAction = $this->transferAction;
+            $result = $transferAction(
                 $user,
                 $request->recipient_telephone,
                 $request->amount,
                 $request->description ?? null
             );
 
-            return $this->successResponse([
-                'debit_transaction' => $result['debit_transaction'],
-                'credit_transaction' => $result['credit_transaction'],
-                'reference' => $result['reference'],
-            ], 'Transfert effectué avec succès');
+            return $this->successResponse($result, 'Transfert effectué avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
@@ -113,15 +102,9 @@ class OmpayController extends Controller
 
     public function getHistory()
     {
-        $user = Auth::user();
-        $compte = $user->client->comptes()->first();
-
-        if (!$compte) {
-            return $this->errorResponse('Aucun compte trouvé', 404);
-        }
-
         try {
-            $history = $this->transactionService->getTransactionHistory($compte->id);
+            $getHistoryAction = $this->getHistoryAction;
+            $history = $getHistoryAction();
             return $this->successResponse($history, 'Historique récupéré avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
@@ -130,7 +113,8 @@ class OmpayController extends Controller
 
     public function logout()
     {
-        Auth::user()->currentAccessToken()->delete();
+        $logoutAction = $this->logoutAction;
+        $logoutAction();
         return $this->successResponse(null, 'Déconnexion réussie');
     }
 
@@ -142,16 +126,10 @@ class OmpayController extends Controller
         $user = Auth::user();
 
         try {
-            $transaction = $this->transactionService->deposit(
-                $user,
-                $request->amount,
-                $request->description
-            );
+            $depositAction = $this->depositAction;
+            $result = $depositAction($user, $request->amount, $request->description);
 
-            return $this->successResponse([
-                'transaction' => $transaction,
-                'reference' => $transaction->reference,
-            ], 'Dépôt effectué avec succès');
+            return $this->successResponse($result, 'Dépôt effectué avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
@@ -165,16 +143,10 @@ class OmpayController extends Controller
         $user = Auth::user();
 
         try {
-            $transaction = $this->transactionService->withdraw(
-                $user,
-                $request->amount,
-                $request->description
-            );
+            $withdrawAction = $this->withdrawAction;
+            $result = $withdrawAction($user, $request->amount, $request->description);
 
-            return $this->successResponse([
-                'transaction' => $transaction,
-                'reference' => $transaction->reference,
-            ], 'Retrait effectué avec succès');
+            return $this->successResponse($result, 'Retrait effectué avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
         }
@@ -186,7 +158,8 @@ class OmpayController extends Controller
     public function getTransactions($compteId)
     {
         try {
-            $history = $this->transactionService->getTransactionHistory($compteId);
+            $getTransactionsAction = $this->getTransactionsAction;
+            $history = $getTransactionsAction($compteId);
             return $this->successResponse($history, 'Historique récupéré avec succès');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 404);
