@@ -3,6 +3,7 @@
 namespace App\Actions\Ompay;
 
 use App\Services\TransactionService;
+use App\Exceptions\AccountNotFoundException;
 use Illuminate\Support\Facades\Auth;
 
 class GetHistoryAction
@@ -20,7 +21,7 @@ class GetHistoryAction
         $compte = $user->client->comptes()->first();
 
         if (!$compte) {
-            throw new \Exception('Aucun compte trouvé');
+            throw new AccountNotFoundException();
         }
 
         return $this->transactionService->getTransactionHistory($compte->id);

@@ -32,6 +32,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the name of the unique identifier for the user.
+     */
+    public function getAuthIdentifierName()
+    {
+        return 'login';
+    }
+
+    /**
      * The data type of the primary key.
      */
     protected $keyType = 'string';

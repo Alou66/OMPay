@@ -21,6 +21,12 @@ use App\Actions\Ompay\GetTransactionsAction;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * @OA\Tag(
+ *     name="OMPay",
+ *     description="API pour les opérations OMPay (dépôt, retrait, transfert, etc.)"
+ * )
+ */
 class OmpayController extends Controller
 {
     use ApiResponseTrait;
@@ -38,6 +44,27 @@ class OmpayController extends Controller
         private GetTransactionsAction $getTransactionsAction
     ) {}
 
+    /**
+     * @OA\Post(
+     *     path="/api/ompay/send-verification",
+     *     tags={"OMPay"},
+     *     summary="Envoyer un code de vérification OTP",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="telephone", type="string", example="771234567")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Code envoyé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     )
+     * )
+     */
     public function sendVerification(SendVerificationRequest $request)
     {
         $sendVerificationAction = $this->sendVerificationAction;
@@ -46,6 +73,26 @@ class OmpayController extends Controller
         return $this->successResponse(null, 'Code de vérification envoyé par SMS avec succès actuellement dans le fichier laravel.log pour les tests');
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/ompay/register",
+     *     tags={"OMPay"},
+     *     summary="Inscription utilisateur avec OTP",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nom", type="string"),
+     *             @OA\Property(property="prenom", type="string"),
+     *             @OA\Property(property="telephone", type="string"),
+     *             @OA\Property(property="password", type="string"),
+     *             @OA\Property(property="cni", type="string"),
+     *             @OA\Property(property="sexe", type="string"),
+     *             @OA\Property(property="date_naissance", type="string", format="date")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Inscription réussie")
+     * )
+     */
     public function register(RegisterRequest $request)
     {
         try {
@@ -58,6 +105,21 @@ class OmpayController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/ompay/login",
+     *     tags={"OMPay"},
+     *     summary="Connexion utilisateur",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="telephone", type="string"),
+     *             @OA\Property(property="password", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Connexion réussie")
+     * )
+     */
     public function login(OmpayLoginRequest $request)
     {
         try {
@@ -70,6 +132,15 @@ class OmpayController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/ompay/balance",
+     *     tags={"OMPay"},
+     *     summary="Obtenir le solde",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Solde récupéré")
+     * )
+     */
     public function getBalance($compteId = null)
     {
         try {
@@ -81,6 +152,23 @@ class OmpayController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/ompay/transfer",
+     *     tags={"OMPay"},
+     *     summary="Effectuer un transfert",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="recipient_telephone", type="string"),
+     *             @OA\Property(property="amount", type="number"),
+     *             @OA\Property(property="description", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Transfert effectué")
+     * )
+     */
     public function transfer(TransferRequest $request)
     {
         $user = Auth::user();
@@ -100,6 +188,15 @@ class OmpayController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/ompay/history",
+     *     tags={"OMPay"},
+     *     summary="Obtenir l'historique des transactions",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Historique récupéré")
+     * )
+     */
     public function getHistory()
     {
         try {
@@ -111,6 +208,15 @@ class OmpayController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/ompay/logout",
+     *     tags={"OMPay"},
+     *     summary="Déconnexion utilisateur",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Déconnexion réussie")
+     * )
+     */
     public function logout()
     {
         $logoutAction = $this->logoutAction;
@@ -119,7 +225,20 @@ class OmpayController extends Controller
     }
 
     /**
-     * Effectuer un dépôt
+     * @OA\Post(
+     *     path="/api/ompay/deposit",
+     *     tags={"OMPay"},
+     *     summary="Effectuer un dépôt",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="amount", type="number"),
+     *             @OA\Property(property="description", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Dépôt effectué")
+     * )
      */
     public function deposit(DepositRequest $request)
     {
@@ -136,7 +255,20 @@ class OmpayController extends Controller
     }
 
     /**
-     * Effectuer un retrait
+     * @OA\Post(
+     *     path="/api/ompay/withdraw",
+     *     tags={"OMPay"},
+     *     summary="Effectuer un retrait",
+     *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="amount", type="number"),
+     *             @OA\Property(property="description", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Retrait effectué")
+     * )
      */
     public function withdraw(WithdrawRequest $request)
     {

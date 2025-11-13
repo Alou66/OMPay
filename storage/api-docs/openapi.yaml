@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: OMPAY Banking API
-  description: API RESTful pour le système bancaire OMPAY - Gestion des comptes, transactions et authentification
+  title: OMPAY Wallet API
+  description: API RESTful pour le système de portefeuille OMPAY - Gestion des transactions et authentification
   version: 1.0.0
   contact:
     name: OMPAY Support
@@ -16,7 +16,6 @@ servers:
 
 security:
   - bearerAuth: []
-  - oauth2: ['*']
 
 components:
   securitySchemes:
@@ -24,124 +23,8 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    oauth2:
-      type: oauth2
-      flows:
-        password:
-          tokenUrl: /oauth/token
-          scopes:
-            '*': Accès complet à l'API
 
   schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: "550e8400-e29b-41d4-a716-446655440000"
-        nom:
-          type: string
-          example: "Diop"
-        prenom:
-          type: string
-          example: "Amadou"
-        telephone:
-          type: string
-          example: "+221771234567"
-        email:
-          type: string
-          format: email
-          example: "amadou.diop@email.com"
-        role:
-          type: string
-          enum: [Admin, Client]
-        status:
-          type: string
-          enum: [Actif, Inactif]
-        is_verified:
-          type: boolean
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-
-    Compte:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        numero_compte:
-          type: string
-          example: "OM12345678"
-        type:
-          type: string
-          enum: [cheque, epargne]
-        statut:
-          type: string
-          enum: [actif, bloque, ferme]
-        solde:
-          type: number
-          format: float
-          example: 150000.00
-        devise:
-          type: string
-          example: "FCFA"
-        client:
-          $ref: '#/components/schemas/Client'
-        created_at:
-          type: string
-          format: date-time
-
-    Client:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        user_id:
-          type: string
-          format: uuid
-        profession:
-          type: string
-          nullable: true
-        user:
-          $ref: '#/components/schemas/User'
-
-    Transaction:
-      type: object
-      properties:
-        id:
-          type: integer
-        type:
-          type: string
-          enum: [depot, retrait, transfert]
-        montant:
-          type: number
-          format: float
-          example: 50000.00
-        statut:
-          type: string
-          enum: [reussi, en_cours, echoue]
-        date_operation:
-          type: string
-          format: date-time
-        description:
-          type: string
-          nullable: true
-        reference:
-          type: string
-          example: "TXN202411111230451234"
-        destinataire_id:
-          type: string
-          format: uuid
-          nullable: true
-        user:
-          $ref: '#/components/schemas/User'
-
     Error:
       type: object
       properties:
@@ -176,19 +59,15 @@ components:
           type: integer
           example: 200
 
-    LoginRequest:
+    SendVerificationRequest:
       type: object
       required:
         - telephone
-        - password
       properties:
         telephone:
           type: string
-          example: "+221771234567"
-        password:
-          type: string
-          format: password
-          example: "password123"
+          example: "771234567"
+          description: "Numéro de téléphone sénégalais (format: 77XXXXXXX)"
 
     RegisterRequest:
       type: object
@@ -197,6 +76,7 @@ components:
         - prenom
         - telephone
         - password
+        - password_confirmation
         - otp
         - cni
         - sexe
@@ -204,31 +84,162 @@ components:
       properties:
         nom:
           type: string
+          maxLength: 255
           example: "Diop"
         prenom:
           type: string
+          maxLength: 255
           example: "Amadou"
         telephone:
           type: string
-          example: "+221771234567"
+          example: "771234567"
+          description: "Numéro de téléphone sénégalais (format: 77XXXXXXX)"
         password:
           type: string
           format: password
+          minLength: 8
           example: "password123"
+        password_confirmation:
+          type: string
+          format: password
+          example: "password123"
+          description: "Confirmation du mot de passe (doit être identique)"
         otp:
           type: string
+          minLength: 6
+          maxLength: 6
           example: "123456"
+          description: "Code OTP de 6 chiffres"
         cni:
           type: string
-          example: "1234567890123"
+          example: "AB123456789"
+          description: "Numéro CNI sénégalais (format: 2 lettres + 9 chiffres)"
         sexe:
           type: string
-          enum: [M, F]
+          enum: ["M", "F"]
           example: "M"
         date_naissance:
           type: string
           format: date
           example: "1990-01-15"
+
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Inscription réussie"
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                nom:
+                  type: string
+                  example: "Diop"
+                prenom:
+                  type: string
+                  example: "Amadou"
+                telephone:
+                  type: string
+                  example: "771234567"
+                cni:
+                  type: string
+                  example: "AB123456789"
+                sexe:
+                  type: string
+                  example: "M"
+                date_naissance:
+                  type: string
+                  format: date
+                  example: "1990-01-15"
+                created_at:
+                  type: string
+                  format: date-time
+            token:
+              type: string
+              example: "1|abc123def456"
+            token_type:
+              type: string
+              example: "Bearer"
+        status_code:
+          type: integer
+          example: 200
+
+    LoginRequest:
+      type: object
+      required:
+        - telephone
+        - password
+      properties:
+        telephone:
+          type: string
+          example: "771234567"
+          description: "Numéro de téléphone sénégalais"
+        password:
+          type: string
+          format: password
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Connexion réussie"
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                nom:
+                  type: string
+                  example: "Diop"
+                prenom:
+                  type: string
+                  example: "Amadou"
+                telephone:
+                  type: string
+                  example: "771234567"
+            compte:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                numero_compte:
+                  type: string
+                  example: "OMP001234"
+                type:
+                  type: string
+                  example: "courant"
+                statut:
+                  type: string
+                  example: "actif"
+            token:
+              type: string
+              example: "1|abc123def456"
+            token_type:
+              type: string
+              example: "Bearer"
+        status_code:
+          type: integer
+          example: 200
 
     DepositRequest:
       type: object
@@ -246,6 +257,57 @@ components:
           maxLength: 255
           example: "Dépôt via mobile"
 
+    DepositResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Dépôt effectué avec succès"
+        data:
+          type: object
+          properties:
+            transaction:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                user_id:
+                  type: integer
+                  example: 1
+                compte_id:
+                  type: integer
+                  example: 1
+                type:
+                  type: string
+                  example: "depot"
+                montant:
+                  type: number
+                  format: float
+                  example: 50000
+                statut:
+                  type: string
+                  example: "reussi"
+                date_operation:
+                  type: string
+                  format: date-time
+                  example: "2025-11-13T21:20:00Z"
+                description:
+                  type: string
+                  example: "Dépôt via mobile"
+                reference:
+                  type: string
+                  example: "TXN202511132120001234"
+            reference:
+              type: string
+              example: "TXN202511132120001234"
+        status_code:
+          type: integer
+          example: 200
+
     WithdrawRequest:
       type: object
       required:
@@ -262,6 +324,57 @@ components:
           maxLength: 255
           example: "Retrait DAB"
 
+    WithdrawResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Retrait effectué avec succès"
+        data:
+          type: object
+          properties:
+            transaction:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 2
+                user_id:
+                  type: integer
+                  example: 1
+                compte_id:
+                  type: integer
+                  example: 1
+                type:
+                  type: string
+                  example: "retrait"
+                montant:
+                  type: number
+                  format: float
+                  example: 25000
+                statut:
+                  type: string
+                  example: "reussi"
+                date_operation:
+                  type: string
+                  format: date-time
+                  example: "2025-11-13T21:20:00Z"
+                description:
+                  type: string
+                  example: "Retrait DAB"
+                reference:
+                  type: string
+                  example: "TXN202511132120001235"
+            reference:
+              type: string
+              example: "TXN202511132120001235"
+        status_code:
+          type: integer
+          example: 200
+
     TransferRequest:
       type: object
       required:
@@ -270,7 +383,8 @@ components:
       properties:
         recipient_telephone:
           type: string
-          example: "+221781234567"
+          example: "781234567"
+          description: "Numéro de téléphone du destinataire"
         amount:
           type: number
           format: float
@@ -282,44 +396,206 @@ components:
           maxLength: 255
           example: "Paiement facture"
 
-paths:
-  /user:
-    get:
-      summary: Récupérer les informations de l'utilisateur connecté
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Informations utilisateur récupérées
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+    TransferResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Transfert effectué avec succès"
+        data:
+          type: object
+          properties:
+            debit_transaction:
+              type: object
+              description: "Transaction de débit du compte expéditeur"
+              properties:
+                id:
+                  type: integer
+                  example: 3
+                user_id:
+                  type: integer
+                  example: 1
+                compte_id:
+                  type: integer
+                  example: 1
+                type:
+                  type: string
+                  example: "transfert"
+                montant:
+                  type: number
+                  format: float
+                  example: 15000
+                statut:
+                  type: string
+                  example: "reussi"
+                destinataire_id:
+                  type: integer
+                  example: 2
+                date_operation:
+                  type: string
+                  format: date-time
+                  example: "2025-11-13T21:20:00Z"
+                description:
+                  type: string
+                  example: "Paiement facture"
+                reference:
+                  type: string
+                  example: "TXN202511132120001236D"
+            credit_transaction:
+              type: object
+              description: "Transaction de crédit du compte destinataire"
+              properties:
+                id:
+                  type: integer
+                  example: 4
+                user_id:
+                  type: integer
+                  example: 2
+                compte_id:
+                  type: integer
+                  example: 2
+                type:
+                  type: string
+                  example: "transfert"
+                montant:
+                  type: number
+                  format: float
+                  example: 15000
+                statut:
+                  type: string
+                  example: "reussi"
+                date_operation:
+                  type: string
+                  format: date-time
+                  example: "2025-11-13T21:20:00Z"
+                description:
+                  type: string
+                  example: "Paiement facture"
+                reference:
+                  type: string
+                  example: "TXN202511132120001236C"
+            reference:
+              type: string
+              example: "TXN202511132120001236"
+        status_code:
+          type: integer
+          example: 200
 
+    BalanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Solde récupéré avec succès"
+        data:
+          type: object
+          properties:
+            compte_id:
+              type: integer
+              example: 1
+            numero_compte:
+              type: string
+              example: "OMP001234"
+            solde:
+              type: number
+              format: float
+              example: 125000
+            devise:
+              type: string
+              example: "FCFA"
+            date_consultation:
+              type: string
+              format: date-time
+              example: "2025-11-13T21:20:00Z"
+        status_code:
+          type: integer
+          example: 200
+
+    HistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Historique récupéré avec succès"
+        data:
+          type: object
+          properties:
+            compte_id:
+              type: integer
+              example: 1
+            numero_compte:
+              type: string
+              example: "OMP001234"
+            transactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  type:
+                    type: string
+                    example: "depot"
+                  montant:
+                    type: number
+                    format: float
+                    example: 50000
+                  statut:
+                    type: string
+                    example: "reussi"
+                  date_operation:
+                    type: string
+                    format: date-time
+                    example: "2025-11-13T21:20:00Z"
+                  description:
+                    type: string
+                    example: "Dépôt via mobile"
+                  reference:
+                    type: string
+                    example: "TXN202511132120001234"
+                  user:
+                    type: object
+                    nullable: true
+                    properties:
+                      nom:
+                        type: string
+                        example: "Diop"
+                      prenom:
+                        type: string
+                        example: "Amadou"
+                      telephone:
+                        type: string
+                        example: "771234567"
+            total:
+              type: integer
+              example: 5
+        status_code:
+          type: integer
+          example: 200
+
+paths:
   /ompay/send-verification:
     post:
-      summary: Envoyer un code de vérification SMS
+      summary: Envoyer un code de vérification OTP par SMS
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - telephone
-              properties:
-                telephone:
-                  type: string
-                  example: "+221771234567"
+              $ref: '#/components/schemas/SendVerificationRequest'
       responses:
         '200':
-          description: Code envoyé avec succès
+          description: Code de vérification envoyé avec succès
           content:
             application/json:
               schema:
@@ -346,7 +622,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/RegisterResponse'
         '400':
           description: Erreur de validation ou OTP invalide
           content:
@@ -369,7 +645,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/LoginResponse'
         '401':
           description: Identifiants invalides
           content:
@@ -379,7 +655,7 @@ paths:
 
   /ompay/deposit:
     post:
-      summary: Effectuer un dépôt
+      summary: Effectuer un dépôt d'argent
       security:
         - bearerAuth: []
       requestBody:
@@ -394,7 +670,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/DepositResponse'
         '400':
           description: Erreur de validation ou montant invalide
           content:
@@ -410,7 +686,7 @@ paths:
 
   /ompay/withdraw:
     post:
-      summary: Effectuer un retrait
+      summary: Effectuer un retrait d'argent
       security:
         - bearerAuth: []
       requestBody:
@@ -425,7 +701,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/WithdrawResponse'
         '400':
           description: Solde insuffisant ou erreur de validation
           content:
@@ -441,7 +717,7 @@ paths:
 
   /ompay/transfer:
     post:
-      summary: Effectuer un transfert
+      summary: Effectuer un transfert d'argent
       security:
         - bearerAuth: []
       requestBody:
@@ -456,7 +732,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/TransferResponse'
         '400':
           description: Destinataire introuvable ou solde insuffisant
           content:
@@ -470,26 +746,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /ompay/balance/{compteId}:
+  /ompay/balance:
     get:
-      summary: Consulter le solde d'un compte
+      summary: Consulter le solde du compte
       security:
         - bearerAuth: []
-      parameters:
-        - name: compteId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-          example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
         '200':
           description: Solde récupéré avec succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: '#/components/schemas/BalanceResponse'
         '404':
           description: Compte introuvable
           content:
@@ -503,31 +771,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /ompay/transactions/{compteId}:
+  /ompay/history:
     get:
-      summary: Récupérer l'historique des transactions d'un compte
+      summary: Récupérer l'historique des transactions
       security:
         - bearerAuth: []
-      parameters:
-        - name: compteId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
       responses:
         '200':
           description: Historique récupéré avec succès
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '404':
-          description: Compte introuvable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/HistoryResponse'
         '401':
           description: Non authentifié
           content:
@@ -549,513 +804,6 @@ paths:
                 $ref: '#/components/schemas/SuccessResponse'
         '401':
           description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /auth/login:
-    post:
-      summary: Connexion administrateur
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Connexion réussie
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          description: Identifiants invalides
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /auth/logout:
-    post:
-      summary: Déconnexion administrateur
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Déconnexion réussie
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/admin/dashboard:
-    get:
-      summary: Tableau de bord administrateur
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Données du dashboard récupérées
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/users:
-    get:
-      summary: Lister tous les utilisateurs (Admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: per_page
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Liste des utilisateurs
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      summary: Créer un nouvel utilisateur (Admin)
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - nom
-                - prenom
-                - telephone
-                - email
-                - password
-              properties:
-                nom:
-                  type: string
-                prenom:
-                  type: string
-                telephone:
-                  type: string
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  format: password
-                role:
-                  type: string
-                  enum: [Admin, Client]
-                  default: Client
-      responses:
-        '201':
-          description: Utilisateur créé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/users/{user}:
-    get:
-      summary: Détails d'un utilisateur (Admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: user
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Détails utilisateur
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Utilisateur introuvable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    put:
-      summary: Modifier un utilisateur (Admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: user
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                nom:
-                  type: string
-                prenom:
-                  type: string
-                status:
-                  type: string
-                  enum: [Actif, Inactif]
-                role:
-                  type: string
-                  enum: [Admin, Client]
-      responses:
-        '200':
-          description: Utilisateur modifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      summary: Supprimer un utilisateur (Admin)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: user
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Utilisateur supprimé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/comptes:
-    get:
-      summary: Lister tous les comptes
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 10
-      responses:
-        '200':
-          description: Liste des comptes
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    post:
-      summary: Créer un nouveau compte
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - type
-                - soldeInitial
-                - devise
-                - solde
-                - client
-              properties:
-                type:
-                  type: string
-                  enum: [cheque, epargne]
-                soldeInitial:
-                  type: number
-                  format: float
-                  minimum: 10000
-                devise:
-                  type: string
-                  enum: [FCFA]
-                solde:
-                  type: number
-                  format: float
-                  minimum: 10000
-                client:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      format: uuid
-                    titulaire:
-                      type: string
-                    nci:
-                      type: string
-                    email:
-                      type: string
-                      format: email
-                    telephone:
-                      type: string
-                    adresse:
-                      type: string
-                    profession:
-                      type: string
-      responses:
-        '201':
-          description: Compte créé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/comptes/{compte}:
-    get:
-      summary: Détails d'un compte
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: compte
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Détails du compte
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Compte introuvable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    put:
-      summary: Modifier un compte
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: compte
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                client:
-                  type: object
-                  properties:
-                    profession:
-                      type: string
-      responses:
-        '200':
-          description: Compte modifié
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    delete:
-      summary: Fermer un compte
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: compte
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Compte fermé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /v1/comptes/{compte}/transactions:
-    get:
-      summary: Historique des transactions d'un compte
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: compte
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Historique des transactions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '403':
-          description: Accès refusé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Compte introuvable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /oauth/token:
-    post:
-      summary: Obtenir un token OAuth2
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              required:
-                - grant_type
-                - client_id
-                - client_secret
-                - username
-                - password
-              properties:
-                grant_type:
-                  type: string
-                  enum: [password]
-                client_id:
-                  type: string
-                client_secret:
-                  type: string
-                username:
-                  type: string
-                password:
-                  type: string
-                scope:
-                  type: string
-      responses:
-        '200':
-          description: Token obtenu
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token_type:
-                    type: string
-                    example: "Bearer"
-                  expires_in:
-                    type: integer
-                  access_token:
-                    type: string
-                  refresh_token:
-                    type: string
-        '400':
-          description: Erreur d'authentification
           content:
             application/json:
               schema:

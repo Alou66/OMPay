@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Compte;
 use App\Models\OtpCode;
 use App\Models\Transaction;
+use App\Exceptions\ApiException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
@@ -23,8 +24,8 @@ class OmpayService
 
     public function sendVerificationCode(string $telephone): OtpCode
     {
-        // Invalidate previous codes - use raw SQL for PostgreSQL boolean
-        DB::update("UPDATE otp_codes SET used = true WHERE telephone = ?", [$telephone]);
+        // Invalidate previous codes
+        OtpCode::where('telephone', $telephone)->update(['used' => DB::raw('true')]);
 
         $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
@@ -48,8 +49,7 @@ class OmpayService
             ->first();
 
         if ($otpRecord) {
-            // Use raw SQL for PostgreSQL boolean update
-            DB::update("UPDATE otp_codes SET used = true, updated_at = NOW() WHERE id = ?", [$otpRecord->id]);
+            $otpRecord->update(['used' => DB::raw('true')]);
             return true;
         }
 
@@ -58,6 +58,10 @@ class OmpayService
 
     public function register(array $data): User
     {
+        if (User::where('login', $data['telephone'])->exists()) {
+            throw new ApiException('Un utilisateur avec ce numéro de téléphone existe déjà.', 400);
+        }
+
         $user = User::create([
             'nom' => $data['nom'],
             'prenom' => $data['prenom'],

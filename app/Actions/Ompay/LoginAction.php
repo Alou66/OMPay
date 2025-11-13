@@ -13,9 +13,9 @@ class LoginAction
     public function __invoke(array $credentials): array
     {
         // Normalize telephone number (remove +221 prefix if present)
-        $credentials['telephone'] = preg_replace('/^(\+221|221)/', '', $credentials['telephone']);
+        $normalizedTelephone = preg_replace('/^(\+221|221)/', '', $credentials['telephone']);
 
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt(['login' => $normalizedTelephone, 'password' => $credentials['password']])) {
             throw new \Exception('Identifiants invalides');
         }
 

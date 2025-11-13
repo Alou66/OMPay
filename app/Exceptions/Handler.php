@@ -79,5 +79,11 @@ class Handler extends ExceptionHandler
                 ], 404);
             }
         });
+
+        $this->renderable(function (ApiException $e, $request) {
+            if ($request->is('api/*')) {
+                return $e->render();
+            }
+        });
     }
 }

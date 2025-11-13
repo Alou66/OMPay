@@ -3,6 +3,7 @@
 namespace App\Actions\Ompay;
 
 use App\Services\TransactionService;
+use App\Exceptions\AccountNotFoundException;
 use Illuminate\Support\Facades\Auth;
 
 class GetBalanceAction
@@ -21,7 +22,7 @@ class GetBalanceAction
             $compte = $user->client->comptes()->first();
 
             if (!$compte) {
-                throw new \Exception('Aucun compte trouvé');
+                throw new AccountNotFoundException();
             }
 
             $compteId = $compte->id;
