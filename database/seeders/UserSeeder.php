@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Admin;
 use App\Models\Client;
 use App\Models\Compte;
 use Illuminate\Support\Facades\Hash;
@@ -34,7 +33,6 @@ class UserSeeder extends Seeder
             'date_naissance' => '1980-01-01',
             'is_verified' => 1,
         ]);
-        Admin::create(['id' => Str::uuid(), 'user_id' => $adminUser->id]);
 
         $clientUser = User::create([
             'id' => Str::uuid(),
