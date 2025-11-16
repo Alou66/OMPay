@@ -13,9 +13,9 @@ class GetHistoryAction
     ) {}
 
     /**
-     * Récupérer l'historique des transactions
+     * Récupérer l'historique des transactions avec pagination et filtrage
      */
-    public function __invoke(): array
+    public function __invoke(int $page = 1, int $perPage = 20, ?string $type = null): array
     {
         $user = Auth::user();
         $compte = $user->client->comptes()->first();
@@ -24,6 +24,6 @@ class GetHistoryAction
             throw new AccountNotFoundException();
         }
 
-        return $this->transactionService->getTransactionHistory($compte->id);
+        return $this->transactionService->getTransactionHistoryPaginated($compte->id, $page, $perPage, $type);
     }
 }

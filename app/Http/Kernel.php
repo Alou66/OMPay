@@ -69,6 +69,7 @@ class Kernel extends HttpKernel
         'role' => \App\Http\Middleware\RoleMiddleware::class,
         'permission' => \App\Http\Middleware\PermissionMiddleware::class,
         'logging' => \App\Http\Middleware\LoggingMiddleware::class,
+        'otp.rate.limit' => \App\Http\Middleware\OTPRateLimitMiddleware::class,
     ];
 
 }

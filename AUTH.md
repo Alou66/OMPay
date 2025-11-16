@@ -419,7 +419,7 @@ Route::middleware(['auth:api', 'logging'])->prefix('v1')->group(function () {
 });
 ```
 
-## ⚙️ Contrôleur d'Authentification
+## Contrôleur d'Authentification
 
 **Emplacement**: `app/Http/Controllers/AuthController.php`
 

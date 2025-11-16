@@ -1,0 +1,166 @@
+[
+    {
+        "endpoint": "\/api\/auth\/register",
+        "method": "POST",
+        "expected_status": 200,
+        "actual_status": 422,
+        "success": false,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/auth\/register` resulted in a `422 Unprocessable Content` response:\n{\"success\":false,\"message\":\"Donn\\u00e9es de validation invalides\",\"errors\":{\"telephone\":[\"Ce num\\u00e9ro de t\\u00e9l\\u00 (truncated...)\n",
+        "response": {
+            "success": false,
+            "message": "Donn\u00e9es de validation invalides",
+            "errors": {
+                "telephone": [
+                    "Ce num\u00e9ro de t\u00e9l\u00e9phone est d\u00e9j\u00e0 utilis\u00e9."
+                ],
+                "cni": [
+                    "Ce num\u00e9ro CNI est d\u00e9j\u00e0 utilis\u00e9."
+                ]
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/auth\/request-otp",
+        "method": "POST",
+        "expected_status": 200,
+        "actual_status": 400,
+        "success": false,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/auth\/request-otp` resulted in a `400 Bad Request` response:\n{\"success\":false,\"message\":\"SQLSTATE[42883]: Undefined function: 7 ERROR:  operator does not exist: boolean = integer\\nL (truncated...)\n",
+        "response": {
+            "success": false,
+            "message": "SQLSTATE[42883]: Undefined function: 7 ERROR:  operator does not exist: boolean = integer\nLINE 1: ...-16 14:31:34' where \"telephone\" = '771234568' and \"used\" = 0\n                                                                    ^\nHINT:  No operator matches the given name and argument types. You might need to add explicit type casts. (Connection: pgsql, SQL: update \"otp_codes\" set \"used\" = 1, \"updated_at\" = 2025-11-16 14:31:34 where \"telephone\" = 771234568 and \"used\" = 0)",
+            "errors": null
+        }
+    },
+    {
+        "endpoint": "\/api\/auth\/verify-otp",
+        "method": "POST",
+        "expected_status": 200,
+        "actual_status": 400,
+        "success": false,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/auth\/verify-otp` resulted in a `400 Bad Request` response:\n{\"success\":false,\"message\":\"Code OTP invalide ou expir\\u00e9.\",\"errors\":null}\n",
+        "response": {
+            "success": false,
+            "message": "Code OTP invalide ou expir\u00e9.",
+            "errors": null
+        }
+    },
+    {
+        "endpoint": "\/api\/auth\/login",
+        "method": "POST",
+        "expected_status": 200,
+        "actual_status": 401,
+        "success": false,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/auth\/login` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Compte non activ\\u00e9. Veuillez v\\u00e9rifier votre num\\u00e9ro de t\\u00e9l\\u00e9phone.\",\"e (truncated...)\n",
+        "response": {
+            "success": false,
+            "message": "Compte non activ\u00e9. Veuillez v\u00e9rifier votre num\u00e9ro de t\u00e9l\u00e9phone.",
+            "errors": null
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/deposit",
+        "method": "POST",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/ompay\/deposit` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/withdraw",
+        "method": "POST",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/ompay\/withdraw` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/transfer",
+        "method": "POST",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/ompay\/transfer` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/balance",
+        "method": "GET",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `GET http:\/\/127.0.0.1:8000\/api\/ompay\/balance` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/history",
+        "method": "GET",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `GET http:\/\/127.0.0.1:8000\/api\/ompay\/history` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/transactions\/123",
+        "method": "GET",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `GET http:\/\/127.0.0.1:8000\/api\/ompay\/transactions\/123` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    },
+    {
+        "endpoint": "\/api\/ompay\/logout",
+        "method": "POST",
+        "expected_status": 401,
+        "actual_status": 401,
+        "success": true,
+        "error": "Client error: `POST http:\/\/127.0.0.1:8000\/api\/ompay\/logout` resulted in a `401 Unauthorized` response:\n{\"success\":false,\"message\":\"Authentification requise\",\"errors\":{\"auth\":\"Token d'authentification manquant ou invalide\"}}\n",
+        "response": {
+            "success": false,
+            "message": "Authentification requise",
+            "errors": {
+                "auth": "Token d'authentification manquant ou invalide"
+            }
+        }
+    }
+]

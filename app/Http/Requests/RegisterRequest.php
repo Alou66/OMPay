@@ -23,13 +23,13 @@ class RegisterRequest extends FormRequest
     {
         return [
             'telephone' => ['required', 'string', 'unique:users,telephone', new \App\Rules\ValidTelephoneSenegal],
-            'otp' => 'required|string|size:6',
             'nom' => 'required|string|max:255',
             'prenom' => 'required|string|max:255',
             'password' => 'required|string|min:8|confirmed',
             'cni' => ['required', 'string', 'unique:users,cni', new \App\Rules\ValidNciSenegal],
-            'sexe' => 'required|in:M,F',
+            'sexe' => 'required|in:Homme,Femme',
             'date_naissance' => 'required|date|before:today',
+            'type_compte' => 'nullable|in:cheque,epargne',
         ];
     }
 

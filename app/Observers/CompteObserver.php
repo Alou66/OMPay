@@ -35,12 +35,7 @@ class CompteObserver
      */
     public function retrieved(Compte $compte)
     {
-        try {
-            $compte->solde = $compte->calculerSolde();
-        } catch (\Exception $e) {
-            $compte->solde = 0;
-            Log::warning('Erreur calcul solde pour compte ' . $compte->id . ': ' . $e->getMessage());
-        }
+        // Solde is now appended via accessor
     }
 
     /**

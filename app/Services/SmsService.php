@@ -22,18 +22,22 @@ class SmsService
      */
     public function sendOtp(string $telephone, string $otp): bool
     {
+        // Always log the OTP
+        Log::info("📱 SMS OMPAY - OTP généré", [
+            'destinataire' => $telephone,
+            'otp_code' => $otp,
+            'message' => "Votre code de vérification OMPAY est : {$otp}",
+            'validite' => '5 minutes',
+            'timestamp' => now()->toISOString()
+        ]);
+
         try {
-            // For development/testing: just log the OTP instead of sending real SMS
-            if (app()->environment(['local', 'testing'])) {
-                Log::info("📱 SMS OMPAY - OTP pour les tests (simulé)", [
+            if (!env('TWILIO_ENABLED', false)) {
+                Log::info("📱 SMS OMPAY - Envoi SMS désactivé (TWILIO_ENABLED=false)", [
                     'destinataire' => $telephone,
                     'otp_code' => $otp,
-                    'message' => "Votre code de vérification OMPAY est : {$otp}",
-                    'validite' => '5 minutes',
-                    'timestamp' => now()->toISOString(),
-                    'note' => 'SMS simulé pour les tests - vérifiez les logs'
+                    'timestamp' => now()->toISOString()
                 ]);
-
                 return true;
             }
 
@@ -80,16 +84,20 @@ class SmsService
      */
     public function sendSms(string $telephone, string $message): bool
     {
+        // Always log the SMS attempt
+        Log::info("📱 SMS Générique - Tentative d'envoi", [
+            'destinataire' => $telephone,
+            'message' => $message,
+            'timestamp' => now()->toISOString()
+        ]);
+
         try {
-            // For development/testing: just log the SMS instead of sending real SMS
-            if (app()->environment(['local', 'testing'])) {
-                Log::info("📱 SMS Générique simulé pour les tests", [
+            if (!env('TWILIO_ENABLED', false)) {
+                Log::info("📱 SMS Générique - Envoi SMS désactivé (TWILIO_ENABLED=false)", [
                     'destinataire' => $telephone,
                     'message' => $message,
-                    'timestamp' => now()->toISOString(),
-                    'note' => 'SMS simulé pour les tests - vérifiez les logs'
+                    'timestamp' => now()->toISOString()
                 ]);
-
                 return true;
             }
 

@@ -38,6 +38,8 @@ class Compte extends Model
         'date_fermeture',
     ];
 
+    protected $appends = ['solde'];
+
     /**
      * Les scopes globaux du modèle
      */
@@ -99,5 +101,13 @@ class Compte extends Model
             ->sum('montant');
 
         return $credits - $debits;
+    }
+
+    /**
+     * Accessor for solde
+     */
+    public function getSoldeAttribute(): float
+    {
+        return $this->calculerSolde();
     }
 }

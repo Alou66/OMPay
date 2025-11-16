@@ -1,1158 +1,1096 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "OMPAY Wallet API",
-    "description": "API RESTful pour le système de portefeuille OMPAY - Gestion des transactions et authentification",
-    "version": "1.0.0",
-    "contact": {
-      "name": "OMPAY Support",
-      "email": "support@ompay.sn"
+    "openapi": "3.0.0",
+    "info": {
+        "title": "OMPAY API",
+        "description": "API pour les opérations OMPay - FinTech Sénégalaise",
+        "version": "1.0.0"
     },
-    "license": {
-      "name": "MIT"
-    }
-  },
-  "servers": [
-    {
-      "url": "http://localhost:8000/api",
-      "description": "Serveur de développement"
+    "servers": [
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Serveur de développement"
+        }
+    ],
+    "paths": {
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Inscription d'un nouvel utilisateur",
+                "description": "Crée un utilisateur avec compte en attente de vérification. Un OTP d'activation sera envoyé automatiquement.",
+                "operationId": "4183f54dfc8f828f20af14b2d41571c3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Diop"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Amadou"
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "771234567"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "cni": {
+                                        "type": "string",
+                                        "example": "AB123456789"
+                                    },
+                                    "sexe": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Homme",
+                                            "Femme"
+                                        ],
+                                        "example": "Homme"
+                                    },
+                                    "date_naissance": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "1990-01-01"
+                                    },
+                                    "type_compte": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cheque",
+                                            "epargne"
+                                        ],
+                                        "example": "cheque"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Utilisateur créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Utilisateur créé – demande de vérification OTP"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation"
+                    }
+                }
+            }
+        },
+        "/auth/request-otp": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Demander un OTP",
+                "description": "Envoie un OTP par SMS. Si compte en attente → OTP d'activation. Si compte actif → OTP de connexion.",
+                "operationId": "8c3f66c4616d0ddcbdc0579de98ef469",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "771234567"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OTP envoyé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Code OTP envoyé par SMS"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Utilisateur non trouvé ou rate limit dépassé"
+                    },
+                    "429": {
+                        "description": "Trop de tentatives"
+                    }
+                }
+            }
+        },
+        "/auth/verify-otp": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Vérifier un OTP",
+                "description": "Vérifie l'OTP et active le compte si nécessaire, puis retourne les tokens d'accès.",
+                "operationId": "6fe84e8705332a974ea42dc3318dcf97",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "771234567"
+                                    },
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Connexion réussie"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                },
+                                                "tokens": {
+                                                    "$ref": "#/components/schemas/AuthTokens"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "OTP invalide ou expiré"
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Rafraîchir le token d'accès",
+                "description": "Génère un nouveau token d'accès en utilisant le refresh token avec rotation.",
+                "operationId": "6109e37da84dd20520267814deda4b98",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "refresh_token": {
+                                        "type": "string",
+                                        "example": "refresh_token_here"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Token rafraîchi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Token rafraîchi"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AuthTokens"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Refresh token invalide"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Connexion avec mot de passe",
+                "description": "Authentification classique avec téléphone et mot de passe pour les comptes déjà activés.",
+                "operationId": "1a150bca0394a6265673e30ffafef8b2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "telephone": {
+                                        "type": "string",
+                                        "example": "771234567"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Connexion réussie"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AuthTokens"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Identifiants invalides"
+                    }
+                }
+            }
+        },
+        "/ompay/balance": {
+            "get": {
+                "tags": [
+                    "📊 OMPAY Consultation"
+                ],
+                "summary": "Consulter le solde du compte",
+                "description": "Récupère le solde actuel du compte principal de l'utilisateur",
+                "operationId": "5b4a37191e32018a34af323bdd4d177c",
+                "parameters": [
+                    {
+                        "name": "compteId",
+                        "in": "query",
+                        "description": "ID du compte (optionnel, utilise le compte principal par défaut)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Solde récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solde récupéré avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "compte_id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "numero_compte": {
+                                                    "type": "string",
+                                                    "example": "OM12345678"
+                                                },
+                                                "solde": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 1500.5
+                                                },
+                                                "devise": {
+                                                    "type": "string",
+                                                    "example": "FCFA"
+                                                },
+                                                "date_consultation": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Token d'authentification manquant ou invalide",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Aucun compte trouvé"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ompay/transfer": {
+            "post": {
+                "tags": [
+                    "💸 OMPAY Transactions"
+                ],
+                "summary": "Effectuer un transfert d'argent",
+                "description": "Transfère de l'argent vers un autre compte OMPAY",
+                "operationId": "e31bce4cdce754a4535593c5bdf1b3cf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "recipient_telephone": {
+                                        "description": "Numéro de téléphone du destinataire",
+                                        "type": "string",
+                                        "example": "772345678"
+                                    },
+                                    "amount": {
+                                        "description": "Montant à transférer (FCFA)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 1000000,
+                                        "minimum": 100,
+                                        "example": 500
+                                    },
+                                    "description": {
+                                        "description": "Description optionnelle",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Paiement facture"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfert effectué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Transfert effectué avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "debit_transaction": {
+                                                    "$ref": "#/components/schemas/Transaction"
+                                                },
+                                                "credit_transaction": {
+                                                    "$ref": "#/components/schemas/Transaction"
+                                                },
+                                                "reference": {
+                                                    "type": "string",
+                                                    "example": "TXN202511152302356175"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation ou fonds insuffisants",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solde insuffisant"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Destinataire non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Utilisateur destinataire introuvable"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ompay/history": {
+            "get": {
+                "tags": [
+                    "📊 OMPAY Consultation"
+                ],
+                "summary": "Obtenir l'historique des transactions",
+                "description": "Récupère l'historique paginé des transactions de l'utilisateur",
+                "operationId": "7f159acd4d66cccf7723d44fe0e637af",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Numéro de page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Nombre d'éléments par page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Filtrer par type de transaction",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "depot",
+                                "retrait",
+                                "transfert"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Historique récupéré avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "transactions": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Transaction"
+                                                    }
+                                                },
+                                                "pagination": {
+                                                    "properties": {
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 20
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 150
+                                                        },
+                                                        "last_page": {
+                                                            "type": "integer",
+                                                            "example": 8
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ompay/logout": {
+            "post": {
+                "tags": [
+                    "🔐 Auth"
+                ],
+                "summary": "Déconnexion utilisateur",
+                "description": "Invalide tous les tokens d'accès et de rafraîchissement",
+                "operationId": "b7c46636fca654a4b5627ce9918f7d4f",
+                "responses": {
+                    "200": {
+                        "description": "Déconnexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Déconnexion réussie"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ompay/deposit": {
+            "post": {
+                "tags": [
+                    "💸 OMPAY Transactions"
+                ],
+                "summary": "Effectuer un dépôt d'argent",
+                "description": "Ajoute des fonds sur le compte de l'utilisateur",
+                "operationId": "117061371c3cc7479a0514fb9ad48032",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "amount": {
+                                        "description": "Montant à déposer (FCFA)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 5000000,
+                                        "minimum": 100,
+                                        "example": 1000
+                                    },
+                                    "description": {
+                                        "description": "Description optionnelle",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Dépôt espèces"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Dépôt effectué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dépôt effectué avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/Transaction"
+                                                },
+                                                "reference": {
+                                                    "type": "string",
+                                                    "example": "TXN202511152258103440"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Le montant doit être supérieur à 100 FCFA"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ompay/withdraw": {
+            "post": {
+                "tags": [
+                    "OMPay"
+                ],
+                "summary": "Effectuer un retrait",
+                "operationId": "794b5222b66de59308ba01ac2288067d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "amount": {
+                                        "type": "number"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Retrait effectué"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
     },
-    {
-      "url": "https://api.ompay.sn/api",
-      "description": "Serveur de production"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
-    "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": false
-          },
-          "message": {
-            "type": "string",
-            "example": "Erreur de validation"
-          },
-          "errors": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 400
-          }
-        }
-      },
-      "SuccessResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Opération réussie"
-          },
-          "data": {
-            "type": "object"
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "SendVerificationRequest": {
-        "type": "object",
-        "required": [
-          "telephone"
-        ],
-        "properties": {
-          "telephone": {
-            "type": "string",
-            "example": "771234567",
-            "description": "Numéro de téléphone sénégalais (format: 77XXXXXXX)"
-          }
-        }
-      },
-      "RegisterRequest": {
-        "type": "object",
-        "required": [
-          "nom",
-          "prenom",
-          "telephone",
-          "password",
-          "password_confirmation",
-          "otp",
-          "cni",
-          "sexe",
-          "date_naissance"
-        ],
-        "properties": {
-          "nom": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Diop"
-          },
-          "prenom": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Amadou"
-          },
-          "telephone": {
-            "type": "string",
-            "example": "771234567",
-            "description": "Numéro de téléphone sénégalais (format: 77XXXXXXX)"
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "minLength": 8,
-            "example": "password123"
-          },
-          "password_confirmation": {
-            "type": "string",
-            "format": "password",
-            "example": "password123",
-            "description": "Confirmation du mot de passe (doit être identique)"
-          },
-          "otp": {
-            "type": "string",
-            "minLength": 6,
-            "maxLength": 6,
-            "example": "123456",
-            "description": "Code OTP de 6 chiffres"
-          },
-          "cni": {
-            "type": "string",
-            "example": "AB123456789",
-            "description": "Numéro CNI sénégalais (format: 2 lettres + 9 chiffres)"
-          },
-          "sexe": {
-            "type": "string",
-            "enum": [
-              "M",
-              "F"
-            ],
-            "example": "M"
-          },
-          "date_naissance": {
-            "type": "string",
-            "format": "date",
-            "example": "1990-01-15"
-          }
-        }
-      },
-      "RegisterResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Inscription réussie"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "user": {
-                "type": "object",
+    "components": {
+        "schemas": {
+            "User": {
                 "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "nom": {
-                    "type": "string",
-                    "example": "Diop"
-                  },
-                  "prenom": {
-                    "type": "string",
-                    "example": "Amadou"
-                  },
-                  "telephone": {
-                    "type": "string",
-                    "example": "771234567"
-                  },
-                  "cni": {
-                    "type": "string",
-                    "example": "AB123456789"
-                  },
-                  "sexe": {
-                    "type": "string",
-                    "example": "M"
-                  },
-                  "date_naissance": {
-                    "type": "string",
-                    "format": "date",
-                    "example": "1990-01-15"
-                  },
-                  "created_at": {
-                    "type": "string",
-                    "format": "date-time"
-                  }
-                }
-              },
-              "token": {
-                "type": "string",
-                "example": "1|abc123def456"
-              },
-              "token_type": {
-                "type": "string",
-                "example": "Bearer"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "LoginRequest": {
-        "type": "object",
-        "required": [
-          "telephone",
-          "password"
-        ],
-        "properties": {
-          "telephone": {
-            "type": "string",
-            "example": "771234567",
-            "description": "Numéro de téléphone sénégalais"
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "example": "password123"
-          }
-        }
-      },
-      "LoginResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Connexion réussie"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "user": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "nom": {
-                    "type": "string",
-                    "example": "Diop"
-                  },
-                  "prenom": {
-                    "type": "string",
-                    "example": "Amadou"
-                  },
-                  "telephone": {
-                    "type": "string",
-                    "example": "771234567"
-                  }
-                }
-              },
-              "compte": {
-                "type": "object",
-                "nullable": true,
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "numero_compte": {
-                    "type": "string",
-                    "example": "OMP001234"
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "courant"
-                  },
-                  "statut": {
-                    "type": "string",
-                    "example": "actif"
-                  }
-                }
-              },
-              "token": {
-                "type": "string",
-                "example": "1|abc123def456"
-              },
-              "token_type": {
-                "type": "string",
-                "example": "Bearer"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "DepositRequest": {
-        "type": "object",
-        "required": [
-          "amount"
-        ],
-        "properties": {
-          "amount": {
-            "type": "number",
-            "format": "float",
-            "minimum": 100,
-            "maximum": 5000000,
-            "example": 50000
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Dépôt via mobile"
-          }
-        }
-      },
-      "DepositResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Dépôt effectué avec succès"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "transaction": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "user_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "compte_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "depot"
-                  },
-                  "montant": {
-                    "type": "number",
-                    "format": "float",
-                    "example": 50000
-                  },
-                  "statut": {
-                    "type": "string",
-                    "example": "reussi"
-                  },
-                  "date_operation": {
-                    "type": "string",
-                    "format": "date-time",
-                    "example": "2025-11-13T21:20:00Z"
-                  },
-                  "description": {
-                    "type": "string",
-                    "example": "Dépôt via mobile"
-                  },
-                  "reference": {
-                    "type": "string",
-                    "example": "TXN202511132120001234"
-                  }
-                }
-              },
-              "reference": {
-                "type": "string",
-                "example": "TXN202511132120001234"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "WithdrawRequest": {
-        "type": "object",
-        "required": [
-          "amount"
-        ],
-        "properties": {
-          "amount": {
-            "type": "number",
-            "format": "float",
-            "minimum": 100,
-            "maximum": 1000000,
-            "example": 25000
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Retrait DAB"
-          }
-        }
-      },
-      "WithdrawResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Retrait effectué avec succès"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "transaction": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 2
-                  },
-                  "user_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "compte_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "retrait"
-                  },
-                  "montant": {
-                    "type": "number",
-                    "format": "float",
-                    "example": 25000
-                  },
-                  "statut": {
-                    "type": "string",
-                    "example": "reussi"
-                  },
-                  "date_operation": {
-                    "type": "string",
-                    "format": "date-time",
-                    "example": "2025-11-13T21:20:00Z"
-                  },
-                  "description": {
-                    "type": "string",
-                    "example": "Retrait DAB"
-                  },
-                  "reference": {
-                    "type": "string",
-                    "example": "TXN202511132120001235"
-                  }
-                }
-              },
-              "reference": {
-                "type": "string",
-                "example": "TXN202511132120001235"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "TransferRequest": {
-        "type": "object",
-        "required": [
-          "recipient_telephone",
-          "amount"
-        ],
-        "properties": {
-          "recipient_telephone": {
-            "type": "string",
-            "example": "781234567",
-            "description": "Numéro de téléphone du destinataire"
-          },
-          "amount": {
-            "type": "number",
-            "format": "float",
-            "minimum": 100,
-            "maximum": 1000000,
-            "example": 15000
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "Paiement facture"
-          }
-        }
-      },
-      "TransferResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Transfert effectué avec succès"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "debit_transaction": {
-                "type": "object",
-                "description": "Transaction de débit du compte expéditeur",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 3
-                  },
-                  "user_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "compte_id": {
-                    "type": "integer",
-                    "example": 1
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "transfert"
-                  },
-                  "montant": {
-                    "type": "number",
-                    "format": "float",
-                    "example": 15000
-                  },
-                  "statut": {
-                    "type": "string",
-                    "example": "reussi"
-                  },
-                  "destinataire_id": {
-                    "type": "integer",
-                    "example": 2
-                  },
-                  "date_operation": {
-                    "type": "string",
-                    "format": "date-time",
-                    "example": "2025-11-13T21:20:00Z"
-                  },
-                  "description": {
-                    "type": "string",
-                    "example": "Paiement facture"
-                  },
-                  "reference": {
-                    "type": "string",
-                    "example": "TXN202511132120001236D"
-                  }
-                }
-              },
-              "credit_transaction": {
-                "type": "object",
-                "description": "Transaction de crédit du compte destinataire",
-                "properties": {
-                  "id": {
-                    "type": "integer",
-                    "example": 4
-                  },
-                  "user_id": {
-                    "type": "integer",
-                    "example": 2
-                  },
-                  "compte_id": {
-                    "type": "integer",
-                    "example": 2
-                  },
-                  "type": {
-                    "type": "string",
-                    "example": "transfert"
-                  },
-                  "montant": {
-                    "type": "number",
-                    "format": "float",
-                    "example": 15000
-                  },
-                  "statut": {
-                    "type": "string",
-                    "example": "reussi"
-                  },
-                  "date_operation": {
-                    "type": "string",
-                    "format": "date-time",
-                    "example": "2025-11-13T21:20:00Z"
-                  },
-                  "description": {
-                    "type": "string",
-                    "example": "Paiement facture"
-                  },
-                  "reference": {
-                    "type": "string",
-                    "example": "TXN202511132120001236C"
-                  }
-                }
-              },
-              "reference": {
-                "type": "string",
-                "example": "TXN202511132120001236"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "BalanceResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Solde récupéré avec succès"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "compte_id": {
-                "type": "integer",
-                "example": 1
-              },
-              "numero_compte": {
-                "type": "string",
-                "example": "OMP001234"
-              },
-              "solde": {
-                "type": "number",
-                "format": "float",
-                "example": 125000
-              },
-              "devise": {
-                "type": "string",
-                "example": "FCFA"
-              },
-              "date_consultation": {
-                "type": "string",
-                "format": "date-time",
-                "example": "2025-11-13T21:20:00Z"
-              }
-            }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      },
-      "HistoryResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
-            "example": "Historique récupéré avec succès"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "compte_id": {
-                "type": "integer",
-                "example": 1
-              },
-              "numero_compte": {
-                "type": "string",
-                "example": "OMP001234"
-              },
-              "transactions": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
                     "id": {
-                      "type": "integer",
-                      "example": 1
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "nom": {
+                        "type": "string",
+                        "example": "Diop"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Amadou"
+                    },
+                    "telephone": {
+                        "type": "string",
+                        "example": "771234567"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "Actif",
+                            "Inactif",
+                            "pending_verification"
+                        ]
+                    },
+                    "cni": {
+                        "type": "string",
+                        "example": "AB123456789"
+                    },
+                    "sexe": {
+                        "type": "string",
+                        "enum": [
+                            "Homme",
+                            "Femme"
+                        ]
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "client",
+                            "admin"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "Compte": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "numero_compte": {
+                        "type": "string",
+                        "example": "OM12345678"
                     },
                     "type": {
-                      "type": "string",
-                      "example": "depot"
-                    },
-                    "montant": {
-                      "type": "number",
-                      "format": "float",
-                      "example": 50000
+                        "type": "string",
+                        "enum": [
+                            "cheque",
+                            "epargne"
+                        ]
                     },
                     "statut": {
-                      "type": "string",
-                      "example": "reussi"
+                        "type": "string",
+                        "enum": [
+                            "actif",
+                            "inactif",
+                            "bloqué",
+                            "fermé"
+                        ]
                     },
-                    "date_operation": {
-                      "type": "string",
-                      "format": "date-time",
-                      "example": "2025-11-13T21:20:00Z"
+                    "solde": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1500.5
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Transaction": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "depot",
+                            "retrait",
+                            "transfert"
+                        ]
+                    },
+                    "montant": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1000
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "reussi",
+                            "echec",
+                            "en_cours"
+                        ]
                     },
                     "description": {
-                      "type": "string",
-                      "example": "Dépôt via mobile"
+                        "type": "string",
+                        "nullable": true
                     },
                     "reference": {
-                      "type": "string",
-                      "example": "TXN202511132120001234"
+                        "type": "string",
+                        "example": "TXN202511152300034086"
                     },
-                    "user": {
-                      "type": "object",
-                      "nullable": true,
-                      "properties": {
-                        "nom": {
-                          "type": "string",
-                          "example": "Diop"
-                        },
-                        "prenom": {
-                          "type": "string",
-                          "example": "Amadou"
-                        },
-                        "telephone": {
-                          "type": "string",
-                          "example": "771234567"
-                        }
-                      }
+                    "date_operation": {
+                        "type": "string",
+                        "format": "date-time"
                     }
-                  }
-                }
-              },
-              "total": {
-                "type": "integer",
-                "example": 5
-              }
+                },
+                "type": "object"
+            },
+            "ApiResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Opération réussie"
+                    },
+                    "data": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AuthTokens": {
+                "properties": {
+                    "access_token": {
+                        "type": "string",
+                        "example": "1|hCrUqzgS8DhPIk3CLIaV1gsvtEmGrKn9IWxsoxkD04360b9a"
+                    },
+                    "refresh_token": {
+                        "type": "string",
+                        "example": "tXV9BauXVgz7NElE7bF4NcM2hqSdFCKDn8kV11oaUn4czTroQSnQUoPGkPWMgN8a"
+                    },
+                    "token_type": {
+                        "type": "string",
+                        "example": "Bearer"
+                    },
+                    "expires_in": {
+                        "type": "integer",
+                        "example": 900
+                    }
+                },
+                "type": "object"
             }
-          },
-          "status_code": {
-            "type": "integer",
-            "example": 200
-          }
-        }
-      }
-    }
-  },
-  "paths": {
-    "/ompay/send-verification": {
-      "post": {
-        "summary": "Envoyer un code de vérification OTP par SMS",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SendVerificationRequest"
-              }
-            }
-          }
         },
-        "responses": {
-          "200": {
-            "description": "Code de vérification envoyé avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Enter JWT token in format (Bearer <token>)"
             }
-          },
-          "400": {
-            "description": "Erreur de validation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
         }
-      }
     },
-    "/ompay/register": {
-      "post": {
-        "summary": "Inscription d'un nouvel utilisateur OMPAY",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          }
+    "tags": [
+        {
+            "name": "🔐 Auth",
+            "description": "Authentification et gestion des utilisateurs"
         },
-        "responses": {
-          "200": {
-            "description": "Inscription réussie",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Erreur de validation ou OTP invalide",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/login": {
-      "post": {
-        "summary": "Connexion utilisateur OMPAY",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          }
+        {
+            "name": "💸 OMPAY Transactions",
+            "description": "Opérations financières (dépôt, retrait, transfert)"
         },
-        "responses": {
-          "200": {
-            "description": "Connexion réussie",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
-                }
-              }
-            }
-          },
-        "401": {
-          "description": "Identifiants invalides",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Error"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/deposit": {
-      "post": {
-        "summary": "Effectuer un dépôt d'argent",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DepositRequest"
-              }
-            }
-          }
+        {
+            "name": "📊 OMPAY Consultation",
+            "description": "Consultation soldes et historiques"
         },
-        "responses": {
-          "200": {
-            "description": "Dépôt effectué avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DepositResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Erreur de validation ou montant invalide",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+        {
+            "name": "OMPay",
+            "description": "OMPay"
         }
-      }
-    },
-    "/ompay/withdraw": {
-      "post": {
-        "summary": "Effectuer un retrait d'argent",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WithdrawRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Retrait effectué avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WithdrawResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Solde insuffisant ou erreur de validation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/transfer": {
-      "post": {
-        "summary": "Effectuer un transfert d'argent",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Transfert effectué avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransferResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Destinataire introuvable ou solde insuffisant",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/balance": {
-      "get": {
-        "summary": "Consulter le solde du compte",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Solde récupéré avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BalanceResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Compte introuvable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/history": {
-      "get": {
-        "summary": "Récupérer l'historique des transactions",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Historique récupéré avec succès",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HistoryResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/ompay/logout": {
-      "post": {
-        "summary": "Déconnexion utilisateur",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Déconnexion réussie",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Non authentifié",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+    ]
 }

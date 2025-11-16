@@ -7,11 +7,17 @@ use App\Models\Compte;
 use App\Models\Transaction;
 use App\Exceptions\InsufficientFundsException;
 use App\Exceptions\AccountNotFoundException;
+use App\Events\TransactionCreated;
+use App\Services\BalanceCacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 
 class TransactionService
 {
+    public function __construct(
+        private BalanceCacheService $balanceCache
+    ) {}
     /**
      * Effectuer un dépôt sur un compte
      */
@@ -41,6 +47,11 @@ class TransactionService
                 'montant' => $amount,
                 'reference' => $transaction->reference,
             ]);
+
+            Event::dispatch(new TransactionCreated($transaction));
+
+            // Invalidate balance cache
+            $this->balanceCache->invalidateBalance($compte->id);
 
             return $transaction;
         });
@@ -83,6 +94,11 @@ class TransactionService
                 'reference' => $transaction->reference,
             ]);
 
+            Event::dispatch(new TransactionCreated($transaction));
+
+            // Invalidate balance cache
+            $this->balanceCache->invalidateBalance($compte->id);
+
             return $transaction;
         });
     }
@@ -93,9 +109,10 @@ class TransactionService
     public function transfer(User $sender, string $recipientTelephone, float $amount, string $description = null): array
     {
         return DB::transaction(function () use ($sender, $recipientTelephone, $amount, $description) {
-            // Récupérer les comptes
-            $senderCompte = $sender->client->comptes()->first();
+            // Récupérer les comptes avec lock pessimiste
+            $senderCompte = $sender->client->comptes()->lockForUpdate()->first();
             $recipientUser = User::where('telephone', $recipientTelephone)->first();
+            $recipientCompte = $recipientUser->client->comptes()->lockForUpdate()->first();
 
             if (!$recipientUser) {
                 throw new AccountNotFoundException('Utilisateur destinataire introuvable');
@@ -105,10 +122,13 @@ class TransactionService
                 throw new \InvalidArgumentException('Impossible de transférer vers son propre compte');
             }
 
-            $recipientCompte = $recipientUser->client->comptes()->first();
-
             if (!$senderCompte || !$recipientCompte) {
                 throw new AccountNotFoundException('Compte introuvable');
+            }
+
+            // Vérifier que le compte destinataire est actif
+            if ($recipientCompte->statut !== 'actif') {
+                throw new \InvalidArgumentException('Le compte destinataire n\'est pas actif');
             }
 
             // Vérifier le solde
@@ -140,6 +160,7 @@ class TransactionService
                 'montant' => $amount,
                 'statut' => 'reussi',
                 'date_operation' => now(),
+                'destinataire_id' => null, // Pour les transactions de crédit (reçues)
                 'description' => $description,
                 'reference' => $reference . 'C', // C pour crédit
             ]);
@@ -150,6 +171,12 @@ class TransactionService
                 'montant' => $amount,
                 'reference' => $reference,
             ]);
+
+            Event::dispatch(new TransactionCreated($debitTransaction));
+            Event::dispatch(new TransactionCreated($creditTransaction));
+
+            // Invalidate balance caches
+            $this->balanceCache->invalidateBalances([$senderCompte->id, $recipientCompte->id]);
 
             return [
                 'debit_transaction' => $debitTransaction,
@@ -165,7 +192,7 @@ class TransactionService
     public function getBalance(string $compteId): array
     {
         $compte = Compte::findOrFail($compteId);
-        $solde = $compte->calculerSolde();
+        $solde = $this->balanceCache->getBalance($compteId);
 
         return [
             'compte_id' => $compte->id,
@@ -209,6 +236,38 @@ class TransactionService
                 ];
             }),
             'total' => $transactions->count(),
+        ];
+    }
+
+    /**
+     * Récupérer l'historique des transactions d'un compte avec pagination et filtrage
+     */
+    public function getTransactionHistoryPaginated(string $compteId, int $page = 1, int $perPage = 20, ?string $type = null): array
+    {
+        $compte = Compte::findOrFail($compteId);
+
+        $query = $compte->transactions()
+            ->with(['user:id,nom,prenom,telephone'])
+            ->orderBy('date_operation', 'desc');
+
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $transactions = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return [
+            'compte_id' => $compte->id,
+            'numero_compte' => $compte->numero_compte,
+            'transactions' => $transactions->items(),
+            'pagination' => [
+                'current_page' => $transactions->currentPage(),
+                'per_page' => $transactions->perPage(),
+                'total' => $transactions->total(),
+                'last_page' => $transactions->lastPage(),
+                'from' => $transactions->firstItem(),
+                'to' => $transactions->lastItem(),
+            ],
         ];
     }
 

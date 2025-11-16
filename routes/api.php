@@ -15,27 +15,27 @@ use App\Http\Controllers\OmpayController;
 |
 */
 
-// OMPAY Routes
-Route::prefix('ompay')->group(function () {
-    // Inscription (2 étapes)
-    Route::post('send-verification', [OmpayController::class, 'sendVerification']);
+// Auth Routes
+Route::prefix('auth')->middleware('otp.rate.limit')->group(function () {
     Route::post('register', [OmpayController::class, 'register']);
-
-    // Authentification
+    Route::post('request-otp', [OmpayController::class, 'requestOTP']);
+    Route::post('verify-otp', [OmpayController::class, 'verifyOTP']);
     Route::post('login', [OmpayController::class, 'login']);
+    Route::post('refresh', [OmpayController::class, 'refreshToken']);
+});
 
-    // Routes protégées
-    Route::middleware('auth:sanctum')->group(function () {
-        // Transactions
-        Route::post('deposit', [OmpayController::class, 'deposit']);
-        Route::post('withdraw', [OmpayController::class, 'withdraw']);
-        Route::post('transfer', [OmpayController::class, 'transfer']);
+// OMPAY Routes (Transactions)
+Route::prefix('ompay')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+    // Transactions
+    Route::post('deposit', [OmpayController::class, 'deposit']);
+    Route::post('withdraw', [OmpayController::class, 'withdraw']);
+    Route::post('transfer', [OmpayController::class, 'transfer']);
 
-        // Consultations
-        Route::get('balance', [OmpayController::class, 'getBalance']);
-        Route::get('history', [OmpayController::class, 'getHistory']);
+    // Consultations
+    Route::get('balance', [OmpayController::class, 'getBalance']);
+    Route::get('history', [OmpayController::class, 'getHistory']);
+    Route::get('transactions/{compteId}', [OmpayController::class, 'getTransactions']);
 
-        // Déconnexion
-        Route::post('logout', [OmpayController::class, 'logout']);
-    });
+    // Déconnexion
+    Route::post('logout', [OmpayController::class, 'logout']);
 });
