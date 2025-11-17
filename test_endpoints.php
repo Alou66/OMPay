@@ -67,7 +67,7 @@ testEndpoint('POST', '/api/auth/register', [
     'cni' => 'AB123456788',
     'sexe' => 'Homme',
     'date_naissance' => '1990-01-01',
-    'type_compte' => 'cheque'
+    'type_compte' => 'simple'
 ], [], 200);
 
 // Request OTP

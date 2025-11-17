@@ -62,7 +62,7 @@ class AuthService
             Compte::create([
                 'client_id' => $client->id,
                 'numero_compte' => 'OM' . str_pad(rand(10000000, 99999999), 8, '0', STR_PAD_LEFT),
-                'type' => $data['type_compte'] ?? 'cheque',
+                'type' => $data['type_compte'] ?? Compte::TYPE_SIMPLE,
                 'statut' => 'inactif',
             ]);
 

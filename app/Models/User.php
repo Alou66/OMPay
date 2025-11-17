@@ -55,6 +55,7 @@ class User extends Authenticatable
         'login',
         'password',
         'telephone',
+        'email',
         'status',
         'cni',
         'code',

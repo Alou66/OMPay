@@ -55,7 +55,7 @@ class UserSeeder extends Seeder
             'id' => Str::uuid(),
             'client_id' => $client->id,
             'numero_compte' => 'C000000001',
-            'type' => 'cheque',
+            'type' => Compte::TYPE_SIMPLE,
             'statut' => 'actif'
         ]);
 

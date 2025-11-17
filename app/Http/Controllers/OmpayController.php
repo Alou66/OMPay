@@ -18,6 +18,7 @@ use App\Actions\Ompay\DepositAction;
 use App\Actions\Ompay\WithdrawAction;
 use App\Actions\Ompay\GetTransactionsAction;
 use App\Services\AuthService;
+use App\Services\DashboardService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -57,6 +58,7 @@ use Illuminate\Http\Request;
  *     @OA\Property(property="nom", type="string", example="Diop"),
  *     @OA\Property(property="prenom", type="string", example="Amadou"),
  *     @OA\Property(property="telephone", type="string", example="771234567"),
+ *     @OA\Property(property="email", type="string", example="amadou.diop@example.com"),
  *     @OA\Property(property="status", type="string", enum={"Actif", "Inactif", "pending_verification"}),
  *     @OA\Property(property="cni", type="string", example="AB123456789"),
  *     @OA\Property(property="sexe", type="string", enum={"Homme", "Femme"}),
@@ -67,7 +69,7 @@ use Illuminate\Http\Request;
  *     schema="Compte",
  *     @OA\Property(property="id", type="string", format="uuid"),
  *     @OA\Property(property="numero_compte", type="string", example="OM12345678"),
- *     @OA\Property(property="type", type="string", enum={"cheque", "epargne"}),
+ *     @OA\Property(property="type", type="string", enum={"marchand", "simple"}),
  *     @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloqué", "fermé"}),
  *     @OA\Property(property="solde", type="number", format="float", example=1500.50),
  *     @OA\Property(property="created_at", type="string", format="date-time")
@@ -111,52 +113,77 @@ class OmpayController extends Controller
         private DepositAction $depositAction,
         private WithdrawAction $withdrawAction,
         private GetTransactionsAction $getTransactionsAction,
-        private AuthService $authService
+        private AuthService $authService,
+        private DashboardService $dashboardService
     ) {}
 
     /**
-     * @OA\Post(
-     *     path="/auth/register",
-     *     tags={"🔐 Auth"},
-     *     summary="Inscription d'un nouvel utilisateur",
-     *     description="Crée un utilisateur avec compte en attente de vérification.",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="nom", type="string", example="Diop"),
-     *             @OA\Property(property="prenom", type="string", example="Amadou"),
-     *             @OA\Property(property="telephone", type="string", example="771234567"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123"),
-     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
-     *             @OA\Property(property="cni", type="string", example="AB123456789"),
-     *             @OA\Property(property="sexe", type="string", enum={"Homme", "Femme"}, example="Homme"),
-     *             @OA\Property(property="date_naissance", type="string", format="date", example="1990-01-01"),
-     *             @OA\Property(property="type_compte", type="string", enum={"cheque", "epargne"}, example="cheque")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Utilisateur créé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Utilisateur créé – demande de vérification OTP"),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(response=400, description="Erreur de validation")
-     * )
-     */
+ * @OA\Post(
+ *     path="/auth/register",
+ *     tags={"🔐 Auth"},
+ *     summary="Inscription d'un nouvel utilisateur",
+ *     description="Crée un utilisateur dont le compte est en attente de vérification par OTP. Aucun objet utilisateur n'est retourné.",
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             @OA\Property(property="nom", type="string", example="Diop"),
+ *             @OA\Property(property="prenom", type="string", example="Amadou"),
+ *             @OA\Property(property="telephone", type="string", example="771234567"),
+ *             @OA\Property(property="password", type="string", format="password", example="password123"),
+ *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
+ *             @OA\Property(property="cni", type="string", example="AB123456789"),
+ *             @OA\Property(property="sexe", type="string", enum={"Homme", "Femme"}, example="Homme"),
+ *             @OA\Property(property="date_naissance", type="string", format="date", example="1990-01-01"),
+ *             @OA\Property(property="type_compte", type="string", enum={"marchand", "simple"}, example="simple")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=200,
+ *         description="Utilisateur créé et OTP envoyé",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=true),
+ *             @OA\Property(property="message", type="string", example="Utilisateur créé avec succès – demande de vérification OTP")
+ *         )
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Erreur de validation",
+ *         @OA\JsonContent(
+ *             @OA\Property(property="success", type="boolean", example=false),
+ *             @OA\Property(property="message", type="string", example="Les données fournies sont invalides.")
+ *         )
+ *     )
+ * )
+ */
+
+    // public function register(RegisterRequest $request)
+    // {
+    //     try {
+    //         $user = $this->authService->register($request->validated());
+    //         return $this->successResponse(
+    //             null,
+    //           'Utilisateur créé avec succès');
+    //     } catch (\Exception $e) {
+    //         return $this->errorResponse($e->getMessage(), 400);
+    //     }
+    // }
+
+
     public function register(RegisterRequest $request)
-    {
-        try {
-            $user = $this->authService->register($request->validated());
-            return $this->successResponse([
-                'user' => $user
-            ], 'Utilisateur créé – demande de vérification OTP');
-        } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage(), 400);
-        }
+{
+    try {
+        $this->authService->register($request->validated());
+
+        return $this->successResponse(
+            null,
+            'Utilisateur créé avec succès – demande de vérification OTP'
+        );
+
+    } catch (\Exception $e) {
+        return $this->errorResponse($e->getMessage(), 400);
     }
+}
+
 
     /**
      * @OA\Post(
@@ -527,8 +554,70 @@ class OmpayController extends Controller
     public function logout()
     {
         $user = Auth::user();
-        $this->authService->logout($user);
+        // $this->authService->logout($user);
+        $logoutAction = $this->logoutAction;
+        $logoutAction();
+
         return $this->successResponse(null, 'Déconnexion réussie');
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/dashboard",
+     *     tags={"📊 Dashboard"},
+     *     summary="Données du dashboard utilisateur",
+     *     description="Récupère les informations de l'utilisateur connecté, son compte et ses 10 dernières transactions",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Dashboard récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Dashboard utilisateur"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", type="object",
+     *                     @OA\Property(property="id", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                     @OA\Property(property="nom", type="string", example="Diop"),
+     *                     @OA\Property(property="prenom", type="string", example="Amadou"),
+     *                     @OA\Property(property="telephone", type="string", example="771234567"),
+     *                     @OA\Property(property="email", type="string", example="amadou.diop@example.com")
+     *                 ),
+     *                 @OA\Property(property="compte", type="object", nullable=true,
+     *                     @OA\Property(property="id", type="string", format="uuid"),
+     *                     @OA\Property(property="numero_compte", type="string", example="OM12345678"),
+     *                     @OA\Property(property="type", type="string", enum={"marchand", "simple"}),
+     *                     @OA\Property(property="statut", type="string", enum={"actif", "inactif", "bloqué", "fermé"})
+     *                 ),
+     *                 @OA\Property(property="transactions", type="array",
+     *                     @OA\Items(type="object",
+     *                         @OA\Property(property="id", type="integer", example=1),
+     *                         @OA\Property(property="montant", type="number", format="float", example=1000.00),
+     *                         @OA\Property(property="type", type="string", enum={"depot", "retrait", "transfert"}),
+     *                         @OA\Property(property="date_creation", type="string", format="date-time", example="2023-11-17T10:00:00Z")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     )
+     * )
+     */
+    public function dashboard()
+    {
+        try {
+            $user = Auth::user();
+            $data = $this->dashboardService->getDashboardData($user);
+            return $this->successResponse($data, 'Dashboard utilisateur');
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 
     /**
@@ -583,18 +672,38 @@ class OmpayController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/ompay/withdraw",
-     *     tags={"OMPay"},
-     *     summary="Effectuer un retrait",
-     *     security={{"sanctum":{}}},
+     *     path="/ompay/withdraw",
+     *     tags={"💸 OMPAY Transactions"},
+     *     summary="Effectuer un retrait d'argent",
+     *     description="Retire des fonds du compte de l'utilisateur",
+     *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="amount", type="number"),
-     *             @OA\Property(property="description", type="string")
+     *             @OA\Property(property="amount", type="number", format="float", example=500.00, minimum=100, maximum=1000000, description="Montant à retirer (FCFA)"),
+     *             @OA\Property(property="description", type="string", maxLength=255, example="Retrait DAB", description="Description optionnelle")
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Retrait effectué")
+     *     @OA\Response(
+     *         response=200,
+     *         description="Retrait effectué avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Retrait effectué avec succès"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="transaction", ref="#/components/schemas/Transaction"),
+     *                 @OA\Property(property="reference", type="string", example="TXN202511152259204561")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur de validation ou fonds insuffisants",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Solde insuffisant")
+     *         )
+     *     )
      * )
      */
     public function withdraw(WithdrawRequest $request)
@@ -612,7 +721,45 @@ class OmpayController extends Controller
     }
 
     /**
-     * Récupérer l'historique des transactions (amélioré)
+     * @OA\Get(
+     *     path="/ompay/transactions/{compteId}",
+     *     tags={"📊 OMPAY Consultation"},
+     *     summary="Obtenir l'historique des transactions d'un compte",
+     *     description="Récupère l'historique détaillé des transactions pour un compte spécifique",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="compteId",
+     *         in="path",
+     *         description="ID du compte",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Historique récupéré avec succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Historique récupéré avec succès"),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Transaction"))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Non authentifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Compte non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Compte introuvable")
+     *         )
+     *     )
+     * )
      */
     public function getTransactions($compteId)
     {

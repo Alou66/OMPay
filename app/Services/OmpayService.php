@@ -85,7 +85,7 @@ class OmpayService
         Compte::create([
             'client_id' => $client->id,
             'numero_compte' => 'OM' . str_pad(rand(10000000, 99999999), 8, '0', STR_PAD_LEFT),
-            'type' => 'cheque',
+            'type' => Compte::TYPE_MARCHAND,
             'statut' => 'actif',
         ]);
 
@@ -104,7 +104,7 @@ class OmpayService
     /**
      * @deprecated Utilisez TransactionService::transfer() à la place
      */
-    public function transfer(User $sender, string $recipientTelephone, float $amount): Transaction
+    public function transfer(User $sender, string $recipientTelephone, float $amount): array
     {
         // Déléguer au TransactionService
         return $this->transactionService->transfer($sender, $recipientTelephone, $amount);

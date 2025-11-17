@@ -18,7 +18,7 @@
                     "🔐 Auth"
                 ],
                 "summary": "Inscription d'un nouvel utilisateur",
-                "description": "Crée un utilisateur avec compte en attente de vérification. Un OTP d'activation sera envoyé automatiquement.",
+                "description": "Crée un utilisateur dont le compte est en attente de vérification par OTP. Aucun objet utilisateur n'est retourné.",
                 "operationId": "4183f54dfc8f828f20af14b2d41571c3",
                 "requestBody": {
                     "required": true,
@@ -68,10 +68,10 @@
                                     "type_compte": {
                                         "type": "string",
                                         "enum": [
-                                            "cheque",
-                                            "epargne"
+                                            "marchand",
+                                            "simple"
                                         ],
-                                        "example": "cheque"
+                                        "example": "simple"
                                     }
                                 },
                                 "type": "object"
@@ -81,7 +81,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Utilisateur créé avec succès",
+                        "description": "Utilisateur créé et OTP envoyé",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -92,10 +92,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Utilisateur créé – demande de vérification OTP"
-                                        },
-                                        "data": {
-                                            "type": "object"
+                                            "example": "Utilisateur créé avec succès – demande de vérification OTP"
                                         }
                                     },
                                     "type": "object"
@@ -104,7 +101,24 @@
                         }
                     },
                     "400": {
-                        "description": "Erreur de validation"
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Les données fournies sont invalides."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -765,6 +779,154 @@
                 ]
             }
         },
+        "/dashboard": {
+            "get": {
+                "tags": [
+                    "📊 Dashboard"
+                ],
+                "summary": "Données du dashboard utilisateur",
+                "description": "Récupère les informations de l'utilisateur connecté, son compte et ses 10 dernières transactions",
+                "operationId": "10e5d31ce878c354af54f15fa3aa7b1b",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dashboard utilisateur"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid",
+                                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                        },
+                                                        "nom": {
+                                                            "type": "string",
+                                                            "example": "Diop"
+                                                        },
+                                                        "prenom": {
+                                                            "type": "string",
+                                                            "example": "Amadou"
+                                                        },
+                                                        "telephone": {
+                                                            "type": "string",
+                                                            "example": "771234567"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "amadou.diop@example.com"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "compte": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string",
+                                                            "format": "uuid"
+                                                        },
+                                                        "numero_compte": {
+                                                            "type": "string",
+                                                            "example": "OM12345678"
+                                                        },
+                                                        "type": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "marchand",
+                                                                "simple"
+                                                            ]
+                                                        },
+                                                        "statut": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "actif",
+                                                                "inactif",
+                                                                "bloqué",
+                                                                "fermé"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "transactions": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "montant": {
+                                                                "type": "number",
+                                                                "format": "float",
+                                                                "example": 1000
+                                                            },
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "depot",
+                                                                    "retrait",
+                                                                    "transfert"
+                                                                ]
+                                                            },
+                                                            "date_creation": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2023-11-17T10:00:00Z"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/ompay/deposit": {
             "post": {
                 "tags": [
@@ -860,13 +1022,14 @@
                 ]
             }
         },
-        "/api/ompay/withdraw": {
+        "/ompay/withdraw": {
             "post": {
                 "tags": [
-                    "OMPay"
+                    "💸 OMPAY Transactions"
                 ],
-                "summary": "Effectuer un retrait",
-                "operationId": "794b5222b66de59308ba01ac2288067d",
+                "summary": "Effectuer un retrait d'argent",
+                "description": "Retire des fonds du compte de l'utilisateur",
+                "operationId": "94d95c511307dffda76b5b71bb4c1c49",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -874,10 +1037,18 @@
                             "schema": {
                                 "properties": {
                                     "amount": {
-                                        "type": "number"
+                                        "description": "Montant à retirer (FCFA)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 1000000,
+                                        "minimum": 100,
+                                        "example": 500
                                     },
                                     "description": {
-                                        "type": "string"
+                                        "description": "Description optionnelle",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Retrait DAB"
                                     }
                                 },
                                 "type": "object"
@@ -887,12 +1058,156 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Retrait effectué"
+                        "description": "Retrait effectué avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Retrait effectué avec succès"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "transaction": {
+                                                    "$ref": "#/components/schemas/Transaction"
+                                                },
+                                                "reference": {
+                                                    "type": "string",
+                                                    "example": "TXN202511152259204561"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation ou fonds insuffisants",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solde insuffisant"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
                     {
-                        "sanctum": []
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ompay/transactions/{compteId}": {
+            "get": {
+                "tags": [
+                    "📊 OMPAY Consultation"
+                ],
+                "summary": "Obtenir l'historique des transactions d'un compte",
+                "description": "Récupère l'historique détaillé des transactions pour un compte spécifique",
+                "operationId": "35e287f17954e74df9bec3f0c4d69b7a",
+                "parameters": [
+                    {
+                        "name": "compteId",
+                        "in": "path",
+                        "description": "ID du compte",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique récupéré avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Historique récupéré avec succès"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Compte non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Compte introuvable"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
                     }
                 ]
             }
@@ -918,6 +1233,10 @@
                     "telephone": {
                         "type": "string",
                         "example": "771234567"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "amadou.diop@example.com"
                     },
                     "status": {
                         "type": "string",
@@ -961,8 +1280,8 @@
                     "type": {
                         "type": "string",
                         "enum": [
-                            "cheque",
-                            "epargne"
+                            "marchand",
+                            "simple"
                         ]
                     },
                     "statut": {
@@ -1089,8 +1408,8 @@
             "description": "Consultation soldes et historiques"
         },
         {
-            "name": "OMPay",
-            "description": "OMPay"
+            "name": "📊 Dashboard",
+            "description": "📊 Dashboard"
         }
     ]
 }

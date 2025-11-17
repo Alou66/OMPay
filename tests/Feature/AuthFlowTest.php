@@ -24,7 +24,7 @@ class AuthFlowTest extends TestCase
             'cni' => 'AB123456789',
             'sexe' => 'Homme',
             'date_naissance' => '1990-01-01',
-            'type_compte' => 'cheque'
+            'type_compte' => \App\Models\Compte::TYPE_SIMPLE
         ];
 
         $response = $this->postJson('/api/auth/register', $data);

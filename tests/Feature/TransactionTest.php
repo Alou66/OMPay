@@ -29,7 +29,7 @@ class TransactionTest extends TestCase
         Compte::create([
             'client_id' => $client->id,
             'numero_compte' => 'OM12345678',
-            'type' => 'cheque',
+            'type' => \App\Models\Compte::TYPE_SIMPLE,
             'statut' => 'actif'
         ]);
 
@@ -44,7 +44,7 @@ class TransactionTest extends TestCase
         Compte::create([
             'client_id' => $recipientClient->id,
             'numero_compte' => 'OM87654321',
-            'type' => 'cheque',
+            'type' => \App\Models\Compte::TYPE_SIMPLE,
             'statut' => 'actif'
         ]);
     }

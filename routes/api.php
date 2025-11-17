@@ -39,3 +39,8 @@ Route::prefix('ompay')->middleware(['auth:sanctum', 'throttle:60,1'])->group(fun
     // Déconnexion
     Route::post('logout', [OmpayController::class, 'logout']);
 });
+
+// Dashboard Route
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('dashboard', [OmpayController::class, 'dashboard']);
+});

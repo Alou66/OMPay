@@ -32,7 +32,7 @@ class RegisterRequest extends FormRequest
             'cni' => ['required', 'string', 'unique:users,cni', new ValidNciSenegal()],
             'sexe' => 'required|in:Homme,Femme',
             'date_naissance' => 'required|date|before:today',
-            'type_compte' => 'nullable|in:cheque,epargne',
+            'type_compte' => 'nullable|in:marchand,simple',
         ];
     }
 
@@ -55,7 +55,7 @@ class RegisterRequest extends FormRequest
             'sexe.in' => 'Le sexe doit être Homme ou Femme.',
             'date_naissance.required' => 'La date de naissance est obligatoire.',
             'date_naissance.before' => 'La date de naissance doit être antérieure à aujourd\'hui.',
-            'type_compte.in' => 'Le type de compte doit être cheque ou epargne.',
+            'type_compte.in' => 'Le type de compte doit être marchand ou simple.',
         ];
     }
 

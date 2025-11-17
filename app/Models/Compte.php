@@ -15,6 +15,16 @@ class Compte extends Model
 
     protected $keyType = 'string';
 
+    // Account types constants
+    const TYPE_MARCHAND = 'marchand';
+    const TYPE_SIMPLE = 'simple';
+
+    // Available account types
+    const TYPES = [
+        self::TYPE_MARCHAND,
+        self::TYPE_SIMPLE,
+    ];
+
     /**
      * Boot the model.
      */

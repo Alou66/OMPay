@@ -29,7 +29,7 @@ class RegisterRequest extends FormRequest
             'cni' => ['required', 'string', 'unique:users,cni', new \App\Rules\ValidNciSenegal],
             'sexe' => 'required|in:Homme,Femme',
             'date_naissance' => 'required|date|before:today',
-            'type_compte' => 'nullable|in:cheque,epargne',
+            'type_compte' => 'nullable|in:marchand,simple',
         ];
     }
 
