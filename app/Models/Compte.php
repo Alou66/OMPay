@@ -36,6 +36,11 @@ class Compte extends Model
             if (empty($model->id)) {
                 $model->id = Str::uuid()->toString();
             }
+
+            // Generate code_marchand for marchand accounts
+            if ($model->type === self::TYPE_MARCHAND && empty($model->code_marchand)) {
+                $model->code_marchand = self::generateCodeMarchand();
+            }
         });
     }
 
@@ -46,6 +51,7 @@ class Compte extends Model
         'statut',
         'motif_blocage',
         'date_fermeture',
+        'code_marchand',
     ];
 
     protected $appends = ['solde'];
@@ -119,5 +125,17 @@ class Compte extends Model
     public function getSoldeAttribute(): float
     {
         return $this->calculerSolde();
+    }
+
+    /**
+     * Generate a unique code_marchand for marchand accounts
+     */
+    public static function generateCodeMarchand(): string
+    {
+        do {
+            $code = 'MCH' . strtoupper(Str::random(6));
+        } while (self::where('code_marchand', $code)->exists());
+
+        return $code;
     }
 }

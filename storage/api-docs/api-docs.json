@@ -9,38 +9,56 @@
         {
             "url": "http://localhost:8000/api",
             "description": "Serveur de développement"
+        },
+        {
+            "url": "https://api.ompay.sn/api",
+            "description": "Serveur de production"
         }
     ],
     "paths": {
         "/auth/register": {
             "post": {
                 "tags": [
-                    "🔐 Auth"
+                    "🔐 Authentification"
                 ],
                 "summary": "Inscription d'un nouvel utilisateur",
-                "description": "Crée un utilisateur dont le compte est en attente de vérification par OTP. Aucun objet utilisateur n'est retourné.",
+                "description": "Crée un utilisateur avec un compte en attente de vérification par OTP. Un SMS avec code OTP sera envoyé.",
                 "operationId": "4183f54dfc8f828f20af14b2d41571c3",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "nom",
+                                    "prenom",
+                                    "telephone",
+                                    "password",
+                                    "password_confirmation",
+                                    "cni",
+                                    "sexe",
+                                    "date_naissance"
+                                ],
                                 "properties": {
                                     "nom": {
                                         "type": "string",
+                                        "maxLength": 255,
                                         "example": "Diop"
                                     },
                                     "prenom": {
                                         "type": "string",
+                                        "maxLength": 255,
                                         "example": "Amadou"
                                     },
                                     "telephone": {
                                         "type": "string",
+                                        "pattern": "^77[0-9]{7}$|^78[0-9]{7}$|^76[0-9]{7}$|^70[0-9]{7}$",
                                         "example": "771234567"
                                     },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
+                                        "minLength": 8,
                                         "example": "password123"
                                     },
                                     "password_confirmation": {
@@ -50,6 +68,7 @@
                                     },
                                     "cni": {
                                         "type": "string",
+                                        "pattern": "^[A-Z]{2}[0-9]{9}$",
                                         "example": "AB123456789"
                                     },
                                     "sexe": {
@@ -67,6 +86,7 @@
                                     },
                                     "type_compte": {
                                         "type": "string",
+                                        "default": "simple",
                                         "enum": [
                                             "marchand",
                                             "simple"
@@ -81,21 +101,30 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Utilisateur créé et OTP envoyé",
+                        "description": "Utilisateur créé avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Utilisateur créé avec succès – demande de vérification OTP"
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "properties": {
+                                                        "code_marchand": {
+                                                            "type": "string",
+                                                            "example": "MCHABC123456",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -105,17 +134,81 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Les données fournies sont invalides."
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "telephone": [
+                                                            "Le numéro de téléphone est déjà utilisé."
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Utilisateur déjà existant",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Un utilisateur avec ce numéro de téléphone existe déjà."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation des données",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -126,19 +219,23 @@
         "/auth/request-otp": {
             "post": {
                 "tags": [
-                    "🔐 Auth"
+                    "🔐 Authentification"
                 ],
-                "summary": "Demander un OTP",
-                "description": "Envoie un OTP par SMS. Si compte en attente → OTP d'activation. Si compte actif → OTP de connexion.",
+                "summary": "Demander un code OTP",
+                "description": "Envoie un code OTP par SMS pour activation du compte ou connexion. Rate limité à 3 demandes par heure.",
                 "operationId": "8c3f66c4616d0ddcbdc0579de98ef469",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "telephone"
+                                ],
                                 "properties": {
                                     "telephone": {
                                         "type": "string",
+                                        "pattern": "^77[0-9]{7}$|^78[0-9]{7}$|^76[0-9]{7}$|^70[0-9]{7}$",
                                         "example": "771234567"
                                     }
                                 },
@@ -149,30 +246,68 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "OTP envoyé",
+                        "description": "OTP envoyé avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Code OTP envoyé par SMS"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ApiResponse"
                                 }
                             }
                         }
                     },
                     "400": {
-                        "description": "Utilisateur non trouvé ou rate limit dépassé"
+                        "description": "Utilisateur non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Utilisateur non trouvé."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "429": {
-                        "description": "Trop de tentatives"
+                        "description": "Trop de tentatives - Rate limit dépassé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Trop de tentatives. Veuillez réessayer dans une heure."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -180,23 +315,29 @@
         "/auth/verify-otp": {
             "post": {
                 "tags": [
-                    "🔐 Auth"
+                    "🔐 Authentification"
                 ],
-                "summary": "Vérifier un OTP",
-                "description": "Vérifie l'OTP et active le compte si nécessaire, puis retourne les tokens d'accès.",
+                "summary": "Vérifier un code OTP",
+                "description": "Vérifie le code OTP, active le compte si nécessaire et retourne les tokens d'accès pour l'authentification.",
                 "operationId": "6fe84e8705332a974ea42dc3318dcf97",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "telephone",
+                                    "otp"
+                                ],
                                 "properties": {
                                     "telephone": {
                                         "type": "string",
+                                        "pattern": "^77[0-9]{7}$|^78[0-9]{7}$|^76[0-9]{7}$|^70[0-9]{7}$",
                                         "example": "771234567"
                                     },
                                     "otp": {
                                         "type": "string",
+                                        "pattern": "^[0-9]{6}$",
                                         "example": "123456"
                                     }
                                 },
@@ -207,38 +348,84 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Connexion réussie",
+                        "description": "OTP vérifié avec succès - tokens retournés",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Connexion réussie"
-                                        },
-                                        "data": {
+                                        {
                                             "properties": {
-                                                "user": {
-                                                    "$ref": "#/components/schemas/User"
-                                                },
-                                                "tokens": {
-                                                    "$ref": "#/components/schemas/AuthTokens"
+                                                "data": {
+                                                    "properties": {
+                                                        "tokens": {
+                                                            "$ref": "#/components/schemas/AuthTokens"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 }
                                             },
                                             "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
-                        "description": "OTP invalide ou expiré"
+                        "description": "OTP invalide ou expiré",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Code OTP invalide ou expiré."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -246,20 +433,23 @@
         "/auth/refresh": {
             "post": {
                 "tags": [
-                    "🔐 Auth"
+                    "🔐 Authentification"
                 ],
                 "summary": "Rafraîchir le token d'accès",
-                "description": "Génère un nouveau token d'accès en utilisant le refresh token avec rotation.",
+                "description": "Génère un nouveau token d'accès en utilisant le refresh token avec rotation automatique pour sécurité.",
                 "operationId": "6109e37da84dd20520267814deda4b98",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "refresh_token"
+                                ],
                                 "properties": {
                                     "refresh_token": {
                                         "type": "string",
-                                        "example": "refresh_token_here"
+                                        "example": "tXV9BauXVgz7NElE7bF4NcM2hqSdFCKDn8kV11oaUn4czTroQSnQUoPGkPWMgN8a"
                                     }
                                 },
                                 "type": "object"
@@ -269,30 +459,79 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Token rafraîchi",
+                        "description": "Token rafraîchi avec succès",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Token rafraîchi"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/AuthTokens"
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/AuthTokens"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
-                        "description": "Refresh token invalide"
+                        "description": "Refresh token invalide ou expiré",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Refresh token invalide ou expiré."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -300,24 +539,30 @@
         "/auth/login": {
             "post": {
                 "tags": [
-                    "🔐 Auth"
+                    "🔐 Authentification"
                 ],
                 "summary": "Connexion avec mot de passe",
-                "description": "Authentification classique avec téléphone et mot de passe pour les comptes déjà activés.",
+                "description": "Authentification classique avec téléphone et mot de passe pour les comptes déjà activés. Rate limité après 5 tentatives échouées.",
                 "operationId": "1a150bca0394a6265673e30ffafef8b2",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "telephone",
+                                    "password"
+                                ],
                                 "properties": {
                                     "telephone": {
                                         "type": "string",
+                                        "pattern": "^77[0-9]{7}$|^78[0-9]{7}$|^76[0-9]{7}$|^70[0-9]{7}$",
                                         "example": "771234567"
                                     },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
+                                        "minLength": 8,
                                         "example": "password123"
                                     }
                                 },
@@ -332,26 +577,129 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Connexion réussie"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/AuthTokens"
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/AuthTokens"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Compte verrouillé ou non activé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Compte non activé. Veuillez vérifier votre numéro de téléphone."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
                     },
                     "401": {
-                        "description": "Identifiants invalides"
+                        "description": "Identifiants invalides",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Identifiants invalides."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Trop de tentatives - compte verrouillé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Trop de tentatives. Compte verrouillé pour 15 minutes."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -359,16 +707,16 @@
         "/ompay/balance": {
             "get": {
                 "tags": [
-                    "📊 OMPAY Consultation"
+                    "📊 Consultation"
                 ],
                 "summary": "Consulter le solde du compte",
-                "description": "Récupère le solde actuel du compte principal de l'utilisateur",
+                "description": "Récupère le solde actuel du compte principal de l'utilisateur connecté",
                 "operationId": "5b4a37191e32018a34af323bdd4d177c",
                 "parameters": [
                     {
                         "name": "compteId",
                         "in": "query",
-                        "description": "ID du compte (optionnel, utilise le compte principal par défaut)",
+                        "description": "ID du compte spécifique (optionnel, utilise le compte principal par défaut)",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -382,43 +730,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Solde récupéré avec succès"
-                                        },
-                                        "data": {
+                                        {
                                             "properties": {
-                                                "compte_id": {
-                                                    "type": "string",
-                                                    "format": "uuid"
-                                                },
-                                                "numero_compte": {
-                                                    "type": "string",
-                                                    "example": "OM12345678"
-                                                },
-                                                "solde": {
-                                                    "type": "number",
-                                                    "format": "float",
-                                                    "example": 1500.5
-                                                },
-                                                "devise": {
-                                                    "type": "string",
-                                                    "example": "FCFA"
-                                                },
-                                                "date_consultation": {
-                                                    "type": "string",
-                                                    "format": "date-time"
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Balance"
                                                 }
                                             },
                                             "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -428,17 +752,24 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Unauthenticated."
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Unauthenticated."
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -448,17 +779,24 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Aucun compte trouvé"
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Aucun compte trouvé pour cet utilisateur"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -466,7 +804,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -474,20 +812,25 @@
         "/ompay/transfer": {
             "post": {
                 "tags": [
-                    "💸 OMPAY Transactions"
+                    "💸 Transactions"
                 ],
                 "summary": "Effectuer un transfert d'argent",
-                "description": "Transfère de l'argent vers un autre compte OMPAY",
+                "description": "Transfère de l'argent vers un autre compte OMPAY. Crée deux transactions : débit pour l'expéditeur, crédit pour le destinataire.",
                 "operationId": "e31bce4cdce754a4535593c5bdf1b3cf",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "recipient_telephone",
+                                    "amount"
+                                ],
                                 "properties": {
                                     "recipient_telephone": {
                                         "description": "Numéro de téléphone du destinataire",
                                         "type": "string",
+                                        "pattern": "^77[0-9]{7}$|^78[0-9]{7}$|^76[0-9]{7}$|^70[0-9]{7}$",
                                         "example": "772345678"
                                     },
                                     "amount": {
@@ -499,7 +842,7 @@
                                         "example": 500
                                     },
                                     "description": {
-                                        "description": "Description optionnelle",
+                                        "description": "Description optionnelle du transfert",
                                         "type": "string",
                                         "maxLength": 255,
                                         "example": "Paiement facture"
@@ -516,32 +859,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Transfert effectué avec succès"
-                                        },
-                                        "data": {
+                                        {
                                             "properties": {
-                                                "debit_transaction": {
-                                                    "$ref": "#/components/schemas/Transaction"
-                                                },
-                                                "credit_transaction": {
-                                                    "$ref": "#/components/schemas/Transaction"
-                                                },
-                                                "reference": {
-                                                    "type": "string",
-                                                    "example": "TXN202511152302356175"
+                                                "data": {
+                                                    "$ref": "#/components/schemas/TransferResponse"
                                                 }
                                             },
                                             "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -551,17 +881,24 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Solde insuffisant"
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Solde insuffisant"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -571,17 +908,50 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Utilisateur destinataire introuvable"
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Utilisateur destinataire introuvable"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation des données",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -589,7 +959,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -597,16 +967,16 @@
         "/ompay/history": {
             "get": {
                 "tags": [
-                    "📊 OMPAY Consultation"
+                    "📊 Consultation"
                 ],
                 "summary": "Obtenir l'historique des transactions",
-                "description": "Récupère l'historique paginé des transactions de l'utilisateur",
+                "description": "Récupère l'historique paginé des transactions du compte principal de l'utilisateur",
                 "operationId": "7f159acd4d66cccf7723d44fe0e637af",
                 "parameters": [
                     {
                         "name": "page",
                         "in": "query",
-                        "description": "Numéro de page",
+                        "description": "Numéro de page pour la pagination",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -617,7 +987,7 @@
                     {
                         "name": "per_page",
                         "in": "query",
-                        "description": "Nombre d'éléments par page",
+                        "description": "Nombre d'éléments par page (max 100)",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -647,49 +1017,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Historique récupéré avec succès"
-                                        },
-                                        "data": {
+                                        {
                                             "properties": {
-                                                "transactions": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/components/schemas/Transaction"
-                                                    }
-                                                },
-                                                "pagination": {
-                                                    "properties": {
-                                                        "current_page": {
-                                                            "type": "integer",
-                                                            "example": 1
-                                                        },
-                                                        "per_page": {
-                                                            "type": "integer",
-                                                            "example": 20
-                                                        },
-                                                        "total": {
-                                                            "type": "integer",
-                                                            "example": 150
-                                                        },
-                                                        "last_page": {
-                                                            "type": "integer",
-                                                            "example": 8
-                                                        }
-                                                    },
-                                                    "type": "object"
+                                                "data": {
+                                                    "$ref": "#/components/schemas/TransactionHistory"
                                                 }
                                             },
                                             "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -699,17 +1039,50 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Unauthenticated."
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Unauthenticated."
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Paramètres de pagination invalides",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -717,7 +1090,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -782,10 +1155,10 @@
         "/dashboard": {
             "get": {
                 "tags": [
-                    "📊 Dashboard"
+                    "📈 Dashboard"
                 ],
-                "summary": "Données du dashboard utilisateur",
-                "description": "Récupère les informations de l'utilisateur connecté, son compte et ses 10 dernières transactions",
+                "summary": "Données du tableau de bord",
+                "description": "Récupère les informations complètes de l'utilisateur connecté : profil, compte avec solde calculé dynamiquement, et les 10 dernières transactions",
                 "operationId": "10e5d31ce878c354af54f15fa3aa7b1b",
                 "responses": {
                     "200": {
@@ -793,108 +1166,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Dashboard utilisateur"
-                                        },
-                                        "data": {
+                                        {
                                             "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "format": "uuid",
-                                                            "example": "550e8400-e29b-41d4-a716-446655440000"
-                                                        },
-                                                        "nom": {
-                                                            "type": "string",
-                                                            "example": "Diop"
-                                                        },
-                                                        "prenom": {
-                                                            "type": "string",
-                                                            "example": "Amadou"
-                                                        },
-                                                        "telephone": {
-                                                            "type": "string",
-                                                            "example": "771234567"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "example": "amadou.diop@example.com"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
-                                                "compte": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string",
-                                                            "format": "uuid"
-                                                        },
-                                                        "numero_compte": {
-                                                            "type": "string",
-                                                            "example": "OM12345678"
-                                                        },
-                                                        "type": {
-                                                            "type": "string",
-                                                            "enum": [
-                                                                "marchand",
-                                                                "simple"
-                                                            ]
-                                                        },
-                                                        "statut": {
-                                                            "type": "string",
-                                                            "enum": [
-                                                                "actif",
-                                                                "inactif",
-                                                                "bloqué",
-                                                                "fermé"
-                                                            ]
-                                                        }
-                                                    },
-                                                    "type": "object",
-                                                    "nullable": true
-                                                },
-                                                "transactions": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer",
-                                                                "example": 1
-                                                            },
-                                                            "montant": {
-                                                                "type": "number",
-                                                                "format": "float",
-                                                                "example": 1000
-                                                            },
-                                                            "type": {
-                                                                "type": "string",
-                                                                "enum": [
-                                                                    "depot",
-                                                                    "retrait",
-                                                                    "transfert"
-                                                                ]
-                                                            },
-                                                            "date_creation": {
-                                                                "type": "string",
-                                                                "format": "date-time",
-                                                                "example": "2023-11-17T10:00:00Z"
-                                                            }
-                                                        },
-                                                        "type": "object"
-                                                    }
+                                                "data": {
+                                                    "$ref": "#/components/schemas/Dashboard"
                                                 }
                                             },
                                             "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -904,17 +1188,51 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
                                         },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Unauthenticated."
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Unauthenticated."
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erreur interne du serveur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Erreur interne du serveur"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -922,7 +1240,7 @@
                 },
                 "security": [
                     {
-                        "bearerAuth": []
+                        "sanctum": []
                     }
                 ]
             }
@@ -1211,17 +1529,188 @@
                     }
                 ]
             }
+        },
+        "/paiement/marchand": {
+            "post": {
+                "tags": [
+                    "🏪 Paiements"
+                ],
+                "summary": "Effectuer un paiement vers un marchand",
+                "description": "Permet à un client de payer un marchand en utilisant son code marchand unique. Le paiement crée deux transactions : débit du client et crédit du marchand. Un SMS de confirmation est envoyé aux deux parties.",
+                "operationId": "def4758660597c05c019c6c838037043",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_marchand",
+                                    "montant"
+                                ],
+                                "properties": {
+                                    "code_marchand": {
+                                        "description": "Code marchand unique du destinataire (format: MCHXXXXXXXX)",
+                                        "type": "string",
+                                        "pattern": "^MCH[A-Z0-9]{8}$",
+                                        "example": "MCHABC123456"
+                                    },
+                                    "montant": {
+                                        "description": "Montant à payer en FCFA",
+                                        "type": "number",
+                                        "format": "float",
+                                        "maximum": 1000000,
+                                        "minimum": 100,
+                                        "example": 5000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paiement effectué avec succès - SMS de confirmation envoyés",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/MerchantPaymentResponse"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erreur de validation ou paiement impossible",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Solde insuffisant"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Unauthenticated."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Code marchand invalide ou compte marchand non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Code marchand invalide"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation des données",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ApiResponse"
+                                        },
+                                        {
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "errors": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
         "schemas": {
             "User": {
                 "properties": {
-                    "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "example": "550e8400-e29b-41d4-a716-446655440000"
-                    },
                     "nom": {
                         "type": "string",
                         "example": "Diop"
@@ -1237,42 +1726,12 @@
                     "email": {
                         "type": "string",
                         "example": "amadou.diop@example.com"
-                    },
-                    "status": {
-                        "type": "string",
-                        "enum": [
-                            "Actif",
-                            "Inactif",
-                            "pending_verification"
-                        ]
-                    },
-                    "cni": {
-                        "type": "string",
-                        "example": "AB123456789"
-                    },
-                    "sexe": {
-                        "type": "string",
-                        "enum": [
-                            "Homme",
-                            "Femme"
-                        ]
-                    },
-                    "role": {
-                        "type": "string",
-                        "enum": [
-                            "client",
-                            "admin"
-                        ]
                     }
                 },
                 "type": "object"
             },
             "Compte": {
                 "properties": {
-                    "id": {
-                        "type": "string",
-                        "format": "uuid"
-                    },
                     "numero_compte": {
                         "type": "string",
                         "example": "OM12345678"
@@ -1298,18 +1757,20 @@
                         "format": "float",
                         "example": 1500.5
                     },
-                    "created_at": {
+                    "devise": {
                         "type": "string",
-                        "format": "date-time"
+                        "example": "FCFA"
+                    },
+                    "code_marchand": {
+                        "type": "string",
+                        "example": "MCHABC123456",
+                        "nullable": true
                     }
                 },
                 "type": "object"
             },
             "Transaction": {
                 "properties": {
-                    "id": {
-                        "type": "integer"
-                    },
                     "type": {
                         "type": "string",
                         "enum": [
@@ -1331,6 +1792,10 @@
                             "en_cours"
                         ]
                     },
+                    "date_operation": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "description": {
                         "type": "string",
                         "nullable": true
@@ -1338,10 +1803,69 @@
                     "reference": {
                         "type": "string",
                         "example": "TXN202511152300034086"
+                    }
+                },
+                "type": "object"
+            },
+            "Balance": {
+                "properties": {
+                    "solde": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1500.5
                     },
-                    "date_operation": {
+                    "devise": {
                         "type": "string",
-                        "format": "date-time"
+                        "example": "FCFA"
+                    }
+                },
+                "type": "object"
+            },
+            "TransactionHistory": {
+                "properties": {
+                    "transactions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Transaction"
+                        }
+                    },
+                    "pagination": {
+                        "properties": {
+                            "current_page": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "example": 20
+                            },
+                            "total": {
+                                "type": "integer",
+                                "example": 150
+                            },
+                            "last_page": {
+                                "type": "integer",
+                                "example": 8
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Dashboard": {
+                "properties": {
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "compte": {
+                        "$ref": "#/components/schemas/Compte"
+                    },
+                    "transactions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Transaction"
+                        }
                     }
                 },
                 "type": "object"
@@ -1357,6 +1881,10 @@
                         "example": "Opération réussie"
                     },
                     "data": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "errors": {
                         "type": "object",
                         "nullable": true
                     }
@@ -1383,9 +1911,57 @@
                     }
                 },
                 "type": "object"
+            },
+            "TransferResponse": {
+                "properties": {
+                    "debit_transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    },
+                    "credit_transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "TXN202511152302356175"
+                    }
+                },
+                "type": "object"
+            },
+            "DepositWithdrawResponse": {
+                "properties": {
+                    "transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "TXN202511152258103440"
+                    }
+                },
+                "type": "object"
+            },
+            "MerchantPaymentResponse": {
+                "properties": {
+                    "debit_transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    },
+                    "credit_transaction": {
+                        "$ref": "#/components/schemas/Transaction"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "TXN202511152302356175"
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
+            "sanctum": {
+                "type": "apiKey",
+                "description": "Enter token in format: Bearer {token}",
+                "name": "Authorization",
+                "in": "header"
+            },
             "bearerAuth": {
                 "type": "http",
                 "scheme": "bearer",
@@ -1396,20 +1972,36 @@
     },
     "tags": [
         {
-            "name": "🔐 Auth",
+            "name": "🔐 Authentification",
             "description": "Authentification et gestion des utilisateurs"
         },
         {
-            "name": "💸 OMPAY Transactions",
+            "name": "💸 Transactions",
             "description": "Opérations financières (dépôt, retrait, transfert)"
         },
         {
-            "name": "📊 OMPAY Consultation",
+            "name": "📊 Consultation",
             "description": "Consultation soldes et historiques"
         },
         {
-            "name": "📊 Dashboard",
-            "description": "📊 Dashboard"
+            "name": "🏪 Paiements",
+            "description": "Paiements vers les comptes marchands"
+        },
+        {
+            "name": "📈 Dashboard",
+            "description": "Tableau de bord utilisateur"
+        },
+        {
+            "name": "🔐 Auth",
+            "description": "🔐 Auth"
+        },
+        {
+            "name": "💸 OMPAY Transactions",
+            "description": "💸 OMPAY Transactions"
+        },
+        {
+            "name": "📊 OMPAY Consultation",
+            "description": "📊 OMPAY Consultation"
         }
     ]
 }

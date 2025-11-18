@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OmpayController;
+use App\Http\Controllers\PaiementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,11 @@ Route::prefix('ompay')->middleware(['auth:sanctum', 'throttle:60,1'])->group(fun
 
     // Déconnexion
     Route::post('logout', [OmpayController::class, 'logout']);
+});
+
+// PAIEMENT Routes
+Route::prefix('paiement')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+    Route::post('marchand', [PaiementController::class, 'payerMarchand']);
 });
 
 // Dashboard Route

@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CompteResource extends JsonResource
+class DashboardResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -15,12 +15,9 @@ class CompteResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'numero_compte' => $this->numero_compte,
-            'type' => $this->type,
-            'statut' => $this->statut,
-            'solde' => $this->calculerSolde(),
-            'devise' => 'FCFA',
-            'code_marchand' => $this->code_marchand,
+            'user' => new UserResource($this->resource['user']),
+            'compte' => $this->resource['compte'] ? new CompteResource($this->resource['compte']) : null,
+            'transactions' => TransactionResource::collection($this->resource['transactions']),
         ];
     }
 }

@@ -9,29 +9,19 @@ trait ApiResponseTrait
     /**
      * Retourner une réponse de succès.
      */
-    // protected function successResponse($data = null, string $message = 'Opération réussie', int $status = 200): JsonResponse
-    // {
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => $message,
-    //         'data' => $data,
-
-    //     ], $status);
-    // }
-
     protected function successResponse($data = null, string $message = 'Opération réussie', int $status = 200): JsonResponse
-{
-    $response = [
-        'success' => true,
-        'message' => $message,
-    ];
+    {
+        $response = [
+            'success' => true,
+            'message' => $message,
+        ];
 
-    if (!is_null($data)) {
-        $response['data'] = $data;
+        if (!is_null($data)) {
+            $response['data'] = $data;
+        }
+
+        return response()->json($response, $status);
     }
-
-    return response()->json($response, $status);
-}
 
 
     /**

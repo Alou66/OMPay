@@ -195,11 +195,8 @@ class TransactionService
         $solde = $this->balanceCache->getBalance($compteId);
 
         return [
-            'compte_id' => $compte->id,
-            'numero_compte' => $compte->numero_compte,
             'solde' => $solde,
             'devise' => 'FCFA',
-            'date_consultation' => now(),
         ];
     }
 
@@ -211,32 +208,11 @@ class TransactionService
         $compte = Compte::findOrFail($compteId);
 
         $transactions = $compte->transactions()
-            ->with(['user:id,nom,prenom,telephone'])
             ->orderBy('date_operation', 'desc')
             ->take($limit)
             ->get();
 
-        return [
-            'compte_id' => $compte->id,
-            'numero_compte' => $compte->numero_compte,
-            'transactions' => $transactions->map(function ($transaction) {
-                return [
-                    'id' => $transaction->id,
-                    'type' => $transaction->type,
-                    'montant' => $transaction->montant,
-                    'statut' => $transaction->statut,
-                    'date_operation' => $transaction->date_operation,
-                    'description' => $transaction->description,
-                    'reference' => $transaction->reference,
-                    'user' => $transaction->user ? [
-                        'nom' => $transaction->user->nom,
-                        'prenom' => $transaction->user->prenom,
-                        'telephone' => $transaction->user->telephone,
-                    ] : null,
-                ];
-            }),
-            'total' => $transactions->count(),
-        ];
+        return $transactions;
     }
 
     /**
@@ -247,7 +223,6 @@ class TransactionService
         $compte = Compte::findOrFail($compteId);
 
         $query = $compte->transactions()
-            ->with(['user:id,nom,prenom,telephone'])
             ->orderBy('date_operation', 'desc');
 
         if ($type) {
@@ -257,16 +232,12 @@ class TransactionService
         $transactions = $query->paginate($perPage, ['*'], 'page', $page);
 
         return [
-            'compte_id' => $compte->id,
-            'numero_compte' => $compte->numero_compte,
             'transactions' => $transactions->items(),
             'pagination' => [
                 'current_page' => $transactions->currentPage(),
                 'per_page' => $transactions->perPage(),
                 'total' => $transactions->total(),
                 'last_page' => $transactions->lastPage(),
-                'from' => $transactions->firstItem(),
-                'to' => $transactions->lastItem(),
             ],
         ];
     }

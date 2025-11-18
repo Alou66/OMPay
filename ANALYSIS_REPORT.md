@@ -122,3 +122,9 @@
 - **Cache warmup** : Précharger soldes.
 - **Monitoring** : Logs, métriques.
 - **Rollback** : Plan en cas de problème.
+
+
+
+ @OA\Property(property="data", type="object",
+ *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+ *                 @OA\Property(property="compte", ref="#/components/schemas/Compte")

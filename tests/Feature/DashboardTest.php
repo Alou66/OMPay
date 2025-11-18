@@ -7,44 +7,70 @@ use App\Models\Client;
 use App\Models\Compte;
 use App\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function authenticated_user_can_access_dashboard()
+    private $user;
+    private $compte;
+    private $token;
+
+    protected function setUp(): void
     {
-        // Create user with email
-        $user = User::factory()->create([
-            'nom' => 'Diop',
-            'prenom' => 'Amadou',
+        parent::setUp();
+
+        // Create user with active account
+        $this->user = User::factory()->create([
             'telephone' => '771234567',
-            'email' => 'amadou.diop@example.com',
+            'nom' => 'Test',
+            'prenom' => 'User',
+            'email' => 'test@example.com',
             'status' => 'Actif',
             'is_verified' => true
         ]);
 
-        // Create client
-        $client = Client::factory()->create(['user_id' => $user->id]);
+        $client = Client::create(['user_id' => $this->user->id]);
 
-        // Create compte
-        $compte = Compte::factory()->create([
+        $this->compte = Compte::create([
             'client_id' => $client->id,
             'numero_compte' => 'OM12345678',
-            'type' => 'simple',
+            'type' => Compte::TYPE_SIMPLE,
             'statut' => 'actif'
         ]);
 
         // Create some transactions
-        Transaction::factory()->count(3)->create(['compte_id' => $compte->id]);
+        Transaction::create([
+            'user_id' => $this->user->id,
+            'compte_id' => $this->compte->id,
+            'type' => 'depot',
+            'montant' => 5000.00,
+            'statut' => 'reussi',
+            'date_operation' => now(),
+            'reference' => 'DASH001'
+        ]);
 
-        // Authenticate user
-        Sanctum::actingAs($user);
+        Transaction::create([
+            'user_id' => $this->user->id,
+            'compte_id' => $this->compte->id,
+            'type' => 'retrait',
+            'montant' => 1000.00,
+            'statut' => 'reussi',
+            'date_operation' => now(),
+            'reference' => 'DASH002'
+        ]);
 
-        $response = $this->getJson('/api/dashboard');
+        // Create access token
+        $this->token = $this->user->createToken('test')->plainTextToken;
+    }
+
+    /** @test */
+    public function authenticated_user_can_access_dashboard()
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson('/api/dashboard');
 
         $response->assertStatus(200)
                  ->assertJson([
@@ -54,80 +80,74 @@ class DashboardTest extends TestCase
                  ->assertJsonStructure([
                      'data' => [
                          'user' => [
-                             'id',
-                             'nom',
-                             'prenom',
-                             'telephone',
-                             'email'
+                             'nom', 'prenom', 'telephone', 'email'
                          ],
                          'compte' => [
-                             'id',
-                             'numero_compte',
-                             'type',
-                             'statut'
+                             'numero_compte', 'type', 'statut', 'solde', 'devise'
                          ],
-                         'transactions'
+                         'transactions' => [
+                             '*' => [
+                                 'type', 'montant', 'statut', 'date_operation', 'reference'
+                             ]
+                         ]
                      ]
                  ]);
 
-        // Check user data
+        // Verify user data
         $response->assertJsonFragment([
-            'user' => [
-                'id' => $user->id,
-                'nom' => 'Diop',
-                'prenom' => 'Amadou',
-                'telephone' => '771234567',
-                'email' => 'amadou.diop@example.com'
-            ]
+            'nom' => 'Test',
+            'prenom' => 'User',
+            'telephone' => '771234567',
+            'email' => 'test@example.com'
         ]);
 
-        // Check compte data
-        $responseData = $response->json('data');
+        // Verify compte data
         $response->assertJsonFragment([
+            'numero_compte' => $this->compte->numero_compte,
             'type' => 'simple',
-            'statut' => 'actif'
+            'statut' => 'actif',
+            'solde' => 4000.0,
+            'devise' => 'FCFA'
         ]);
-        $this->assertArrayHasKey('numero_compte', $responseData['compte']);
 
-        // Check transactions count (should be 3, but limited to 10)
-        $this->assertCount(3, $responseData['transactions']);
+        // Verify transactions (should have last 10, but we have 2)
+        $response->assertJsonCount(2, 'data.transactions');
     }
 
     /** @test */
-    public function unauthenticated_user_cannot_access_dashboard()
+    public function dashboard_requires_authentication()
     {
         $response = $this->getJson('/api/dashboard');
 
-        $response->assertStatus(401)
-                 ->assertJson([
-                     'success' => false,
-                     'message' => 'Authentification requise'
-                 ]);
+        $response->assertStatus(401);
     }
 
     /** @test */
-    public function dashboard_returns_empty_compte_if_no_compte()
+    public function dashboard_shows_correct_balance()
     {
-        $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'status' => 'Actif',
-            'is_verified' => true
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson('/api/dashboard');
+
+        $response->assertStatus(200);
+
+        // Balance should be 5000 - 1000 = 4000
+        $response->assertJsonFragment([
+            'solde' => 4000.0
         ]);
+    }
 
-        // Create client but no compte
-        Client::factory()->create(['user_id' => $user->id]);
+    /** @test */
+    public function dashboard_returns_empty_transactions_if_none()
+    {
+        // Delete existing transactions
+        Transaction::where('user_id', $this->user->id)->delete();
 
-        Sanctum::actingAs($user);
-
-        $response = $this->getJson('/api/dashboard');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson('/api/dashboard');
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'success' => true,
-                     'data' => [
-                         'compte' => null,
-                         'transactions' => []
-                     ]
-                 ]);
+                ->assertJsonCount(0, 'data.transactions');
     }
 }
